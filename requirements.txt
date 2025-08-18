@@ -1,0 +1,9 @@
+# Minimal requirements for the Pilot Salary Calculator
+# Only essential packages to keep .exe size small
+
+pandas>=1.5.0,<2.0.0
+tkcalendar>=1.6.0
+# tkinter is included with Python
+
+# Optional: for better compression
+# upx can be used externally with PyInstaller
