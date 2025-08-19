@@ -13,3 +13,234 @@
 2025-08-18 18:45:26,053 - services - INFO - Processed 30/31 days, generated 44 schedule entries
 2025-08-18 18:45:26,093 - utils - INFO - Salary calculation completed successfully
 2025-08-19 09:42:36,178 - utils - INFO - Application initialized successfully
+2025-08-19 11:02:35,003 - utils - INFO - Application initialized successfully
+2025-08-19 11:02:43,022 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-19 11:02:48,804 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 11:02:55,546 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 11:02:55,562 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:03:33,828 - services - INFO - Added new airport KGS: (36.8, 27.0)
+2025-08-19 11:03:33,828 - utils - INFO - Added missing airport KGS
+2025-08-19 11:03:33,863 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:03:33,865 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 11:03:34,025 - utils - INFO - Salary calculation completed successfully
+2025-08-19 11:03:59,438 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 11:03:59,453 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:03:59,455 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 11:03:59,550 - utils - INFO - Salary calculation completed successfully
+2025-08-19 11:09:18,519 - utils - INFO - Application initialized successfully
+2025-08-19 11:09:25,182 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 11:09:29,641 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 11:09:29,644 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:09:50,284 - services - INFO - Added new airport KGS: (36.8, 27.0)
+2025-08-19 11:09:50,284 - utils - INFO - Added missing airport KGS
+2025-08-19 11:09:50,346 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:09:50,346 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 11:09:50,469 - utils - INFO - Salary calculation completed successfully
+2025-08-19 11:10:56,723 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 11:10:56,756 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:10:56,758 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 11:10:56,869 - utils - INFO - Salary calculation completed successfully
+2025-08-19 11:14:58,466 - utils - INFO - Application initialized successfully
+2025-08-19 11:15:04,989 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 11:15:06,171 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 11:15:06,198 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:15:18,163 - services - INFO - Added new airport KGS: (36.8, 27.0)
+2025-08-19 11:15:18,163 - utils - INFO - Added missing airport KGS
+2025-08-19 11:15:18,202 - services - INFO - No month filtering - processing all dates
+2025-08-19 11:15:18,203 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 11:15:18,320 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:00:56,802 - utils - INFO - Application initialized successfully
+2025-08-19 13:01:01,672 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:01:03,383 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:01:03,399 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:01:57,652 - services - INFO - Added new airport KGS: (36.8, 27.0)
+2025-08-19 13:01:57,652 - utils - INFO - Added missing airport KGS
+2025-08-19 13:01:57,671 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:01:57,671 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:01:57,728 - utils - ERROR - Calculation failed
+Traceback (most recent call last):
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\main.py", line 763, in _calculate_salary
+    extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 406, in calculate_salary
+    salary_calc = self._calculate_salary_components(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 981, in _calculate_salary_components
+    midnight_standby_days = self._count_midnight_standby_days(data, grouped_df)
+                                                              ^^^^
+NameError: name 'data' is not defined
+2025-08-19 13:02:02,453 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:02:02,485 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:02:02,485 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:02:02,536 - utils - ERROR - Calculation failed
+Traceback (most recent call last):
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\main.py", line 763, in _calculate_salary
+    extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 406, in calculate_salary
+    salary_calc = self._calculate_salary_components(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 981, in _calculate_salary_components
+    midnight_standby_days = self._count_midnight_standby_days(data, grouped_df)
+                                                              ^^^^
+NameError: name 'data' is not defined
+2025-08-19 13:02:08,120 - utils - INFO - Application initialized successfully
+2025-08-19 13:02:13,555 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:02:14,866 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:02:14,869 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:02:14,869 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:02:14,908 - utils - ERROR - Calculation failed
+Traceback (most recent call last):
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\main.py", line 763, in _calculate_salary
+    extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 406, in calculate_salary
+    salary_calc = self._calculate_salary_components(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 981, in _calculate_salary_components
+    midnight_standby_days = self._count_midnight_standby_days(data, grouped_df)
+                                                              ^^^^
+NameError: name 'data' is not defined
+2025-08-19 13:03:04,914 - utils - INFO - Application initialized successfully
+2025-08-19 13:03:10,456 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:03:13,294 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:03:13,307 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:03:13,307 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:03:13,351 - utils - ERROR - Calculation failed
+Traceback (most recent call last):
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\main.py", line 763, in _calculate_salary
+    extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 406, in calculate_salary
+    salary_calc = self._calculate_salary_components(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\fusar\OneDrive\Documents\python\CalcClean\services.py", line 981, in _calculate_salary_components
+    midnight_standby_days = self._count_midnight_standby_days(data, grouped_df)
+                                                              ^^^^
+NameError: name 'data' is not defined
+2025-08-19 13:04:08,390 - utils - INFO - Application initialized successfully
+2025-08-19 13:04:13,121 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:04:14,433 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:04:14,448 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:04:14,448 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:04:14,501 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 13:04:14,565 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:06:04,185 - utils - INFO - Application initialized successfully
+2025-08-19 13:06:27,341 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:06:29,481 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:06:29,481 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:06:29,499 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:06:29,532 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 13:06:29,532 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 13:06:29,532 - services - INFO - Total midnight standby days found: 1
+2025-08-19 13:06:29,608 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:10:17,791 - utils - INFO - Application initialized successfully
+2025-08-19 13:10:24,050 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 13:10:26,316 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:10:26,332 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:10:26,332 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 13:10:26,404 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 13:10:26,404 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 13:10:26,404 - services - INFO - Total midnight standby days found: 1
+2025-08-19 13:10:26,493 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:11:00,069 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-19 13:11:01,311 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:11:01,335 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:11:01,335 - services - INFO - Processed 32/32 days, generated 61 schedule entries
+2025-08-19 13:11:01,350 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-19 13:11:01,352 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:35:00, next day start 2025-08-18 00:00:00
+2025-08-19 13:11:01,353 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-19 13:11:01,397 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-19 13:11:01,397 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-19 13:11:01,398 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-19 13:11:01,398 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-19 13:11:01,398 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-19 13:11:01,399 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-19 13:11:01,399 - services - INFO - Total midnight standby days found: 3
+2025-08-19 13:11:01,448 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:19:20,107 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:19:20,116 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:19:20,117 - services - INFO - Processed 32/32 days, generated 61 schedule entries
+2025-08-19 13:19:20,133 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-19 13:19:20,133 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:35:00, next day start 2025-08-18 00:00:00
+2025-08-19 13:19:20,133 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-19 13:19:20,174 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-19 13:19:20,174 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-19 13:19:20,187 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-19 13:19:20,187 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-19 13:19:20,187 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-19 13:19:20,187 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-19 13:19:20,187 - services - INFO - Total midnight standby days found: 3
+2025-08-19 13:19:20,228 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:19:38,196 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:19:38,213 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:19:38,214 - services - INFO - Processed 32/32 days, generated 61 schedule entries
+2025-08-19 13:19:38,231 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-19 13:19:38,232 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:35:00, next day start 2025-08-18 00:00:00
+2025-08-19 13:19:38,232 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-19 13:19:38,270 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-19 13:19:38,280 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-19 13:19:38,281 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-19 13:19:38,281 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-19 13:19:38,281 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-19 13:19:38,281 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-19 13:19:38,281 - services - INFO - Total midnight standby days found: 3
+2025-08-19 13:19:38,330 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:20:18,863 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:20:18,869 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:20:18,875 - services - INFO - Processed 32/32 days, generated 61 schedule entries
+2025-08-19 13:20:18,893 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-19 13:20:18,895 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:35:00, next day start 2025-08-18 00:00:00
+2025-08-19 13:20:18,895 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-19 13:20:18,932 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-19 13:20:18,932 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-19 13:20:18,932 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-19 13:20:18,932 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-19 13:20:18,932 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-19 13:20:18,932 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-19 13:20:18,932 - services - INFO - Total midnight standby days found: 3
+2025-08-19 13:20:18,987 - utils - INFO - Salary calculation completed successfully
+2025-08-19 13:20:45,245 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 13:20:45,254 - services - INFO - No month filtering - processing all dates
+2025-08-19 13:20:45,259 - services - INFO - Processed 32/32 days, generated 61 schedule entries
+2025-08-19 13:20:45,274 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-19 13:20:45,274 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:35:00, next day start 2025-08-18 00:00:00
+2025-08-19 13:20:45,274 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-19 13:20:45,322 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-19 13:20:45,328 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-19 13:20:45,328 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-19 13:20:45,328 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-19 13:20:45,328 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-19 13:20:45,328 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-19 13:20:45,328 - services - INFO - Total midnight standby days found: 3
+2025-08-19 13:20:45,375 - utils - INFO - Salary calculation completed successfully
+2025-08-19 15:40:31,400 - utils - INFO - Application initialized successfully
+2025-08-19 15:40:37,906 - utils - INFO - Successfully loaded roster file with utf-8 encoding
+2025-08-19 15:40:45,035 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 15:40:45,055 - services - INFO - No month filtering - processing all dates
+2025-08-19 15:40:45,058 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 15:40:45,095 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 15:40:45,095 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 15:40:45,097 - services - INFO - Total midnight standby days found: 1
+2025-08-19 15:40:45,150 - utils - INFO - Salary calculation completed successfully
+2025-08-19 15:40:45,511 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 15:40:45,528 - services - INFO - No month filtering - processing all dates
+2025-08-19 15:40:45,528 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 15:40:45,588 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 15:40:45,590 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 15:40:45,590 - services - INFO - Total midnight standby days found: 1
+2025-08-19 15:40:45,648 - utils - INFO - Salary calculation completed successfully
+2025-08-19 15:41:07,316 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 15:41:07,336 - services - INFO - No month filtering - processing all dates
+2025-08-19 15:41:07,336 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 15:41:07,388 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 15:41:07,395 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 15:41:07,395 - services - INFO - Total midnight standby days found: 1
+2025-08-19 15:41:07,436 - utils - INFO - Salary calculation completed successfully
+2025-08-19 15:41:13,799 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-19 15:41:13,817 - services - INFO - No month filtering - processing all dates
+2025-08-19 15:41:13,817 - services - INFO - Processed 31/31 days, generated 47 schedule entries
+2025-08-19 15:41:13,870 - services - INFO - Midnight crossing detected by symbol for standby day 2025-07-16
+2025-08-19 15:41:13,870 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
+2025-08-19 15:41:13,871 - services - INFO - Total midnight standby days found: 1
+2025-08-19 15:41:13,920 - utils - INFO - Salary calculation completed successfully

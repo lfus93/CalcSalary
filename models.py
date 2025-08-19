@@ -60,6 +60,10 @@ class SalaryCalculation:
     contribution_base: float
     estimated_tax: float
     social_contributions: float
+    working_days: int
+    base_working_days: int
+    midnight_standby_days: int
+    midnight_standby_dates: set
 
 
 @dataclass

@@ -104,7 +104,8 @@ class AirportService:
             with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
                 lat_str = str(lat).replace('.', ',')
                 lon_str = str(lon).replace('.', ',')
-                f.write(f"\n{iata};{lat_str};{lon_str}")
+                # Use proper CSV format: icao_code;iata_code;gps_code;Lat;Long
+                f.write(f"\n;{iata};{iata};{lat_str};{lon_str}")
         except Exception as e:
             raise IOError(f"Could not save airport to CSV: {e}")
 
@@ -404,7 +405,7 @@ class SalaryCalculatorService:
         # Calculate salary components
         salary_calc = self._calculate_salary_components(
             detailed_df, grouped_df, profile, base_salary, allowance, 
-            sector_value, night_stop_bonus, sum(b.amount for b in ido_bonuses)
+            sector_value, night_stop_bonus, sum(b.amount for b in ido_bonuses), roster_data
         )
         
         return detailed_df, grouped_df, ido_bonuses, night_stop_bonus, extra_diaria_days, salary_calc
@@ -767,6 +768,82 @@ class SalaryCalculatorService:
         
         return extra_days
     
+    def _count_midnight_standby_days(self, data: Dict[str, Any], grouped_df: pd.DataFrame) -> tuple[int, Set[str]]:
+        """Count standby/airport duty days that follow flights landing after midnight"""
+        midnight_days = 0
+        midnight_standby_dates = set()
+        schedule = data['dailySchedule']
+        
+        for i in range(len(schedule) - 1):
+            day1, day2 = schedule[i], schedule[i + 1]
+            
+            # Debug logging
+            self.logger.debug(f"Checking {day1['date']} -> {day2['date']}: day1_type={day1['duty'].get('type')}, day2_type={day2['duty'].get('type')}")
+            
+            # Check if day1 has flights and day2 is standby/airport duty
+            if (day1['duty'].get('type') == 'Flight' and 
+                day1['duty'].get('legs') and
+                day2['duty'].get('type') in ['Standby', 'Airport Duty']):
+                
+                last_leg = day1['duty']['legs'][-1]
+                landing_time = last_leg.get('landingTime')
+                
+                self.logger.debug(f"Found flight->standby: {day1['date']} -> {day2['date']}, landing_time: {landing_time}")
+                
+                if landing_time:
+                    try:
+                        # Check for midnight crossing symbol or early morning landing
+                        has_midnight_symbol = (chr(185) in landing_time or  
+                                             '\ufffd' in landing_time or    
+                                             '�' in landing_time or         
+                                             '¹' in landing_time or
+                                             '?' in landing_time)  # Also check for ? symbol
+                        
+                        # Extract main time
+                        main_time = landing_time.split('/')[0]
+                        main_time = re.sub(r'[^\d:]', '', main_time)
+                        
+                        self.logger.debug(f"Processed landing time: original='{landing_time}', main_time='{main_time}', has_symbol={has_midnight_symbol}")
+                        
+                        if ':' not in main_time:
+                            continue
+                            
+                        time_parts = main_time.split(':')
+                        if len(time_parts) < 2:
+                            continue
+                        
+                        hours, minutes = int(time_parts[0]), int(time_parts[1])
+                        if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+                            continue
+                        
+                        # Check if this is a midnight crossing (landing after midnight)
+                        is_midnight_crossing = False
+                        
+                        if has_midnight_symbol:
+                            is_midnight_crossing = True
+                            self.logger.info(f"Midnight crossing detected by symbol for standby day {day2['date']}")
+                        elif hours <= 6:  # Early morning landing likely means midnight crossing
+                            takeoff_time = last_leg.get('takeOffTime')
+                            if takeoff_time:
+                                takeoff_str = re.sub(r'[^\d:]', '', takeoff_time)
+                                if ':' in takeoff_str:
+                                    takeoff_hours = int(takeoff_str.split(':')[0])
+                                    if takeoff_hours >= 18:  # Evening takeoff, early morning landing
+                                        is_midnight_crossing = True
+                                        self.logger.info(f"Midnight crossing detected by time logic for standby day {day2['date']}")
+                        
+                        if is_midnight_crossing:
+                            midnight_days += 1
+                            midnight_standby_dates.add(day2['date'])
+                            self.logger.info(f"Adding diaria for standby/airport duty day {day2['date']} due to midnight landing from {day1['date']}")
+                    
+                    except (ValueError, IndexError, TypeError) as e:
+                        self.logger.warning(f"Error processing midnight standby for {day2.get('date')}: {e}")
+                        continue
+        
+        self.logger.info(f"Total midnight standby days found: {midnight_days}")
+        return midnight_days, midnight_standby_dates
+    
     def _calculate_airport_duty_sectors(self, duty: Dict[str, Any]) -> float:
         """Calculate sectors for airport duty based on hours and if called"""
         # Default assumption: 4 hours if not specified
@@ -859,7 +936,7 @@ class SalaryCalculatorService:
     def _calculate_salary_components(self, detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
                                    profile: PilotProfile, base_salary: float, allowance: float,
                                    sector_value: float, night_stop_bonus: float, 
-                                   total_ido_bonus: float) -> SalaryCalculation:
+                                   total_ido_bonus: float, data: Dict[str, Any]) -> SalaryCalculation:
         """Calculate all salary components"""
         
         # Calculate extra position bonus
@@ -906,10 +983,14 @@ class SalaryCalculatorService:
         
         # Calculate working days for diaria
         # Include Flight, Positioning, Training, and Rest Days (REST earns diaria)
-        # Airport Duty does NOT count as diaria
-        working_days = grouped_df[
+        # Also include Standby/Airport Duty days that follow flights landing after midnight
+        base_working_days = grouped_df[
             grouped_df['Attività'].str.contains("Flight|Positioning|Training|Rest Day", na=False)
         ]['Data'].nunique()
+        
+        # Add standby/airport duty days that have midnight landing from previous day
+        midnight_standby_days, midnight_standby_dates = self._count_midnight_standby_days(data, grouped_df)
+        working_days = base_working_days + midnight_standby_days
         
         # Get diaria value
         _, _, _, diaria, _ = SalaryConfig.POSITIONS[profile.position]
@@ -931,5 +1012,9 @@ class SalaryCalculatorService:
             taxable_income=taxable_income,
             contribution_base=contribution_base,
             estimated_tax=estimated_tax,
-            social_contributions=social_contributions
+            social_contributions=social_contributions,
+            working_days=working_days,
+            base_working_days=base_working_days,
+            midnight_standby_days=midnight_standby_days,
+            midnight_standby_dates=midnight_standby_dates
         )

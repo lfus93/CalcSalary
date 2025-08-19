@@ -833,10 +833,8 @@ class SalaryCalculatorApp(tk.Tk):
         # Get position data for diaria calculation
         _, _, _, diaria, _ = SalaryConfig.POSITIONS[profile.position]
         
-        # Calculate working days
-        working_days = grouped_df[
-            grouped_df['Attività'].str.contains("Flight|Positioning|Training|Rest Day", na=False)
-        ]['Data'].nunique()
+        # Use correct working days from salary calculation (includes midnight standby days)
+        working_days = salary_calc.working_days
         
         self.report_data = {
             'user_inputs': {
@@ -851,6 +849,8 @@ class SalaryCalculatorApp(tk.Tk):
             'ido_bonuses': [{'date': b.date, 'symbol': b.symbol, 'amount': b.amount} for b in ido_bonuses],
             'night_stop_bonus': night_stop_bonus,
             'extra_diaria_days': extra_diaria_days,
+            'midnight_standby_days': salary_calc.midnight_standby_days,
+            'midnight_standby_dates': salary_calc.midnight_standby_dates,
             'salary_data': {
                 'gross_total': salary_calc.gross_total,
                 'net_estimated': salary_calc.net_estimated,
@@ -876,13 +876,15 @@ class SalaryCalculatorApp(tk.Tk):
         _, _, _, diaria, _ = SalaryConfig.POSITIONS[self.position_combo.get()]
         
         # Display schedule
-        self._display_schedule(detailed_df, grouped_df, ido_bonuses, extra_diaria_days, diaria)
+        midnight_standby_dates = salary_calc.midnight_standby_dates
+        self._display_schedule(detailed_df, grouped_df, ido_bonuses, extra_diaria_days, midnight_standby_dates, diaria)
         
         # Display summary
         self._display_salary_summary(grouped_df, salary_calc, extra_diaria_days, diaria)
     
     def _display_schedule(self, detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
-                         ido_bonuses: List[BonusInfo], extra_diaria_days: Set[str], diaria: float):
+                         ido_bonuses: List[BonusInfo], extra_diaria_days: Set[str], 
+                         midnight_standby_dates: Set[str], diaria: float):
         """Display flight schedule in treeview"""
         # Clear existing items
         for item in self.tree.get_children():
@@ -923,7 +925,7 @@ class SalaryCalculatorApp(tk.Tk):
             # Determine if this day counts toward diaria
             activity_str = day_row['Attività']
             counts_diaria = (any(pattern in activity_str for pattern in ["Flight", "Positioning", "Training", "Rest Day"]) 
-                           and "Airport Duty" not in activity_str)
+                           and "Airport Duty" not in activity_str) or date_str in midnight_standby_dates
             diaria_display = "✓" if counts_diaria else "—"
             
             # Calculate earnings display
@@ -980,15 +982,21 @@ class SalaryCalculatorApp(tk.Tk):
         # Get month/year from data
         month_year = pd.to_datetime(grouped_df['Data'].iloc[0]).strftime('%B %Y').upper()
         
-        # Calculate diaria (matching original logic)
-        working_days = len(grouped_df[grouped_df['Attività'].str.contains("Flight|Positioning|Training|Rest Day", na=False)])
+        # Calculate diaria using correct working days from salary calculation
+        base_working_days = salary_calc.base_working_days
+        midnight_standby_days = salary_calc.midnight_standby_days
+        working_days = salary_calc.working_days
         extra_diaria_count = len(extra_diaria_days)
         total_diaria_days = working_days + extra_diaria_count
         total_diaria = total_diaria_days * diaria
         
-        # Format diaria string like original
-        if extra_diaria_count > 0:
-            diaria_str = f"Diaria Totale ({working_days}+{extra_diaria_count} giorni):"
+        # Format diaria string showing breakdown
+        if midnight_standby_days > 0 and extra_diaria_count > 0:
+            diaria_str = f"Diaria Totale ({base_working_days}+{midnight_standby_days}+{extra_diaria_count} giorni):"
+        elif midnight_standby_days > 0:
+            diaria_str = f"Diaria Totale ({base_working_days}+{midnight_standby_days} giorni):"
+        elif extra_diaria_count > 0:
+            diaria_str = f"Diaria Totale ({base_working_days}+{extra_diaria_count} giorni):"
         else:
             diaria_str = f"Diaria Totale ({total_diaria_days} giorni):"
         

@@ -1,4 +1,4 @@
 # Requirements for the Pilot Salary Calculator Web App
 streamlit==1.28.0
-pandas==2.0.3
-openpyxl==3.1.2
+pandas==1.5.3
+openpyxl==3.0.10
