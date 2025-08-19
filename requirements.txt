@@ -1,4 +1,7 @@
 # Requirements for the Pilot Salary Calculator Web App
+--upgrade-strategy eager
+pip>=25.0.0
+
 streamlit==1.39.0
 pandas==2.1.4
 openpyxl==3.1.5
