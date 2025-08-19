@@ -132,6 +132,12 @@ class DistanceCalculator:
         lat_d_deg, lon_d_deg = dep_coords
         lat_a_deg, lon_a_deg = arr_coords
         
+        # Convert string coordinates to float (handle comma decimal separator)
+        lat_d_deg = float(str(lat_d_deg).replace(',', '.'))
+        lon_d_deg = float(str(lon_d_deg).replace(',', '.'))
+        lat_a_deg = float(str(lat_a_deg).replace(',', '.'))
+        lon_a_deg = float(str(lon_a_deg).replace(',', '.'))
+        
         # Convert to radians
         lon_d, lat_d, lon_a, lat_a = map(math.radians, [lon_d_deg, lat_d_deg, lon_a_deg, lat_a_deg])
         
@@ -313,8 +319,10 @@ class RosterParser:
             end_time_str = match.group(2)
             
             try:
-                start_hour, start_min = map(int, start_time_str.split(':'))
-                end_hour, end_min = map(int, end_time_str.split(':'))
+                start_parts = start_time_str.split(':')
+                end_parts = end_time_str.split(':')
+                start_hour, start_min = int(start_parts[0]), int(start_parts[1]) if len(start_parts) >= 2 else 0
+                end_hour, end_min = int(end_parts[0]), int(end_parts[1]) if len(end_parts) >= 2 else 0
                 
                 # Calculate duration in hours
                 start_minutes = start_hour * 60 + start_min
@@ -597,9 +605,20 @@ class SalaryCalculatorService:
                 
                 if landing_time:
                     try:
-                        # Parse landing time
-                        time_str = re.sub(r'[^\d:]', '', landing_time)
-                        hours, minutes = map(int, time_str.split(':'))
+                        # Parse landing time - handle complex formats like "01:55?�/00:36"
+                        main_time = landing_time.split('/')[0]  # Take part before /
+                        time_str = re.sub(r'[^\d:]', '', main_time)
+                        time_parts = time_str.split(':')
+                        if len(time_parts) < 2:
+                            continue
+                        
+                        try:
+                            hours, minutes = int(time_parts[0]), int(time_parts[1])
+                            # Validate time values
+                            if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+                                continue
+                        except ValueError:
+                            continue
                         
                         day1_date = datetime.strptime(day1['date'], '%Y-%m-%d')
                         landing_datetime = day1_date.replace(hour=hours, minute=minutes)
@@ -672,12 +691,25 @@ class SalaryCalculatorService:
                                              '�' in landing_time or         # Direct symbol
                                              '¹' in landing_time)           # Superscript 1
                         
-                        # Clean time string and parse
-                        time_str = re.sub(r'[^\d:]', '', landing_time)
-                        if ':' not in time_str:
+                        # Handle complex time formats like "01:55?�/00:36"
+                        # First extract the main time (before any separator like /)
+                        main_time = landing_time.split('/')[0]  # Take part before /
+                        main_time = re.sub(r'[^\d:]', '', main_time)  # Clean non-digits/colons
+                        
+                        if ':' not in main_time:
                             continue
                             
-                        hours, minutes = map(int, time_str.split(':'))
+                        time_parts = main_time.split(':')
+                        if len(time_parts) < 2:
+                            continue
+                        
+                        try:
+                            hours, minutes = int(time_parts[0]), int(time_parts[1])
+                            # Validate time values
+                            if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+                                continue
+                        except ValueError:
+                            continue
                         
                         day1_date = datetime.strptime(day1['date'], '%Y-%m-%d')
                         landing_datetime = day1_date.replace(hour=hours, minute=minutes)

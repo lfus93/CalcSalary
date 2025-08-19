@@ -1,0 +1,15 @@
+2025-08-18 18:44:53,156 - utils - INFO - Application initialized successfully
+2025-08-18 18:44:57,987 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-18 18:45:00,511 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-18 18:45:00,511 - services - INFO - No month filtering - processing all dates
+2025-08-18 18:45:00,511 - services - INFO - Processed 31/31 days, generated 46 schedule entries
+2025-08-18 18:45:00,561 - utils - INFO - Salary calculation completed successfully
+2025-08-18 18:45:14,939 - utils - INFO - Month filtering enabled for payment month 10
+2025-08-18 18:45:14,942 - services - INFO - Filtering for payment month 10 (roster month 9)
+2025-08-18 18:45:14,942 - services - INFO - Processed 30/31 days, generated 44 schedule entries
+2025-08-18 18:45:14,993 - utils - INFO - Salary calculation completed successfully
+2025-08-18 18:45:26,047 - utils - INFO - Month filtering enabled for payment month 10
+2025-08-18 18:45:26,053 - services - INFO - Filtering for payment month 10 (roster month 9)
+2025-08-18 18:45:26,053 - services - INFO - Processed 30/31 days, generated 44 schedule entries
+2025-08-18 18:45:26,093 - utils - INFO - Salary calculation completed successfully
+2025-08-19 09:42:36,178 - utils - INFO - Application initialized successfully

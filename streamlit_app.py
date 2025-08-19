@@ -97,8 +97,22 @@ def main():
     # Main content area
     if uploaded_file is not None:
         try:
-            # Read the uploaded file
-            file_content = uploaded_file.read().decode('utf-8')
+            # Read the uploaded file with multiple encoding attempts
+            file_bytes = uploaded_file.read()
+            file_content = None
+            
+            # Try different encodings
+            for encoding in ['utf-8', 'latin-1', 'cp1252', 'windows-1252']:
+                try:
+                    file_content = file_bytes.decode(encoding)
+                    st.success(f"File loaded successfully using {encoding} encoding")
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if file_content is None:
+                st.error("Could not decode the file. Please check the file encoding.")
+                return
             
             # Create pilot profile
             profile = PilotProfile(
@@ -116,15 +130,10 @@ def main():
             
             # Calculate salary
             with st.spinner("Calculating salary..."):
-                try:
-                    (detailed_df, grouped_df, ido_bonuses, night_stop_bonus, 
-                     extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
-                        roster_data, profile
-                    )
-                except MissingAirportError as e:
-                    st.error(f"Missing airport coordinates for: {e.iata_code}")
-                    st.info("Please contact the administrator to add this airport to the database.")
-                    return
+                (detailed_df, grouped_df, ido_bonuses, night_stop_bonus, 
+                 extra_diaria_days, salary_calc) = calculator_service.calculate_salary(
+                    roster_data, profile
+                )
             
             if detailed_df.empty:
                 st.warning("No valid flight data found in roster.")
@@ -175,6 +184,32 @@ def main():
                         mime="text/plain"
                     )
             
+        except MissingAirportError as e:
+            st.error(f"Missing airport coordinates for: {e.iata_code}")
+            
+            # Show manual input form for missing airport
+            st.warning("This airport is not in our database. Please add coordinates manually:")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                lat = st.number_input(f"Latitude for {e.iata_code}:", value=0.0, format="%.6f", step=0.000001, key=f"lat_{e.iata_code}")
+            with col2:
+                lon = st.number_input(f"Longitude for {e.iata_code}:", value=0.0, format="%.6f", step=0.000001, key=f"lon_{e.iata_code}")
+            
+            if st.button(f"Add {e.iata_code} coordinates and recalculate", type="primary"):
+                if lat != 0.0 or lon != 0.0:
+                    # Add airport to service temporarily
+                    airport_service.add_airport(e.iata_code, lat, lon)
+                    st.success(f"Added {e.iata_code}: ({lat}, {lon})")
+                    st.rerun()  # Restart the app to recalculate
+                else:
+                    st.error("Please enter valid coordinates (not 0,0)")
+            else:
+                st.info("💡 **Tip**: You can find airport coordinates on websites like:")
+                st.markdown("- [OpenFlights](https://openflights.org/data.html)")
+                st.markdown("- [World Airport Codes](https://www.world-airport-codes.com/)")
+                st.markdown("- [AirNav](https://www.airnav.com/airports/)")
+        
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
             if debug_mode:
@@ -216,7 +251,19 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
     """Display calculation results"""
     
     # Get month/year from data
-    month_year = pd.to_datetime(grouped_df['Data'].iloc[0]).strftime('%B %Y').upper()
+    first_date = grouped_df['Data'].iloc[0]
+    if isinstance(first_date, str):
+        month_year = pd.to_datetime(first_date).strftime('%B %Y').upper()
+    else:
+        month_year = first_date.strftime('%B %Y').upper()
+    
+    # Calculate diaria for main display
+    _, _, _, diaria, _ = SalaryConfig.POSITIONS[profile.position]
+    working_days = len(grouped_df[grouped_df['Attività'].str.contains("Flight|Positioning|Training|Rest Day", na=False)])
+    extra_diaria_count = len(extra_diaria_days)
+    total_diaria_days = working_days + extra_diaria_count
+    total_diaria = total_diaria_days * diaria
+    total_in_payslip = salary_calc.net_estimated + total_diaria
     
     # Summary metrics
     st.header(f"💰 Salary Summary for {month_year}")
@@ -227,14 +274,13 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
         st.metric("Gross Total", f"€{salary_calc.gross_total:,.2f}")
     
     with col2:
-        st.metric("Net Estimated", f"€{salary_calc.net_estimated:,.2f}")
+        st.metric("Total in Payslip", f"€{total_in_payslip:,.2f}", help="Net salary + tax-free diaria")
     
     with col3:
         operational_sectors = detailed_df['Settori Operativi'].sum()
         st.metric("Operational Sectors", f"{operational_sectors:.1f}")
     
     with col4:
-        working_days = len(grouped_df[grouped_df['Attività'].str.contains("Flight|Positioning|Training", na=False)])
         st.metric("Working Days", f"{working_days}")
     
     # Detailed breakdown
@@ -248,7 +294,7 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
         
         # Prepare display dataframe
         display_df = grouped_df.copy()
-        display_df['Data'] = display_df['Data'].dt.strftime('%Y-%m-%d')
+        display_df['Data'] = pd.to_datetime(display_df['Data']).dt.strftime('%Y-%m-%d')
         display_df['Settori'] = display_df['Settori'].round(2)
         display_df['Guadagno (€)'] = display_df['Guadagno (€)'].round(2)
         
@@ -263,7 +309,7 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
         
         # Filter to show only flights
         flight_df = detailed_df[detailed_df['Settori'] > 0].copy()
-        flight_df['Data'] = flight_df['Data'].dt.strftime('%Y-%m-%d')
+        flight_df['Data'] = pd.to_datetime(flight_df['Data']).dt.strftime('%Y-%m-%d')
         flight_df['Distanza'] = flight_df['Distanza'].round(0)
         flight_df['Settori'] = flight_df['Settori'].round(2)
         flight_df['Guadagno (€)'] = flight_df['Guadagno (€)'].round(2)
@@ -280,11 +326,7 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
     with tab3:
         st.subheader("Complete Salary Breakdown")
         
-        # Get diaria info
-        _, _, _, diaria, _ = SalaryConfig.POSITIONS[profile.position]
-        extra_diaria_count = len(extra_diaria_days)
-        total_diaria_days = working_days + extra_diaria_count
-        total_diaria = total_diaria_days * diaria
+        # Use already calculated diaria values
         
         # Create breakdown
         breakdown_data = []
@@ -327,7 +369,7 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
             ["Estimated Tax (IRPEF)", f"€{-salary_calc.estimated_tax:,.2f}"],
             ["Diaria (Tax-free)", f"€{total_diaria:,.2f}"],
             ["", ""],
-            ["**NET TOTAL (in payslip)**", f"**€{salary_calc.net_estimated + total_diaria:,.2f}**"]
+            ["**TOTAL IN PAYSLIP**", f"**€{total_in_payslip:,.2f}**"]
         ])
         
         # Display as DataFrame
@@ -380,7 +422,11 @@ def export_to_text(grouped_df: pd.DataFrame, salary_calc, profile: PilotProfile)
     """Export results to text format"""
     output = []
     
-    month_year = pd.to_datetime(grouped_df['Data'].iloc[0]).strftime('%B %Y').upper()
+    first_date = grouped_df['Data'].iloc[0]
+    if isinstance(first_date, str):
+        month_year = pd.to_datetime(first_date).strftime('%B %Y').upper()
+    else:
+        month_year = first_date.strftime('%B %Y').upper()
     
     output.append(f"===== SALARY REPORT FOR {month_year} =====")
     output.append(f"Position: {profile.position}")
