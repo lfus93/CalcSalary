@@ -244,3 +244,57 @@ NameError: name 'data' is not defined
 2025-08-19 15:41:13,870 - services - INFO - Adding diaria for standby/airport duty day 2025-07-16 due to midnight landing from 2025-07-15
 2025-08-19 15:41:13,871 - services - INFO - Total midnight standby days found: 1
 2025-08-19 15:41:13,920 - utils - INFO - Salary calculation completed successfully
+2025-08-23 14:29:05,012 - utils - INFO - Application initialized successfully
+2025-08-23 14:29:18,140 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-23 14:29:21,591 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-23 14:29:21,599 - services - INFO - No month filtering - processing all dates
+2025-08-23 14:29:21,599 - services - INFO - Processed 32/32 days, generated 59 schedule entries
+2025-08-23 14:29:21,616 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-23 14:29:21,616 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:30:00, next day start 2025-08-18 00:00:00
+2025-08-23 14:29:21,616 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-23 14:29:21,658 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-23 14:29:21,658 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-23 14:29:21,658 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-23 14:29:21,658 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-23 14:29:21,658 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-23 14:29:21,658 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-23 14:29:21,658 - services - INFO - Total midnight standby days found: 3
+2025-08-23 14:29:21,724 - utils - INFO - Salary calculation completed successfully
+2025-08-23 14:40:41,239 - utils - INFO - Application initialized successfully
+2025-08-23 14:40:58,267 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-23 14:41:01,005 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-23 14:41:01,008 - services - INFO - No month filtering - processing all dates
+2025-08-23 14:41:01,009 - services - INFO - Processed 32/32 days, generated 59 schedule entries
+2025-08-23 14:41:01,023 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-23 14:41:01,023 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:30:00, next day start 2025-08-18 00:00:00
+2025-08-23 14:41:01,023 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-23 14:41:01,050 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-04
+2025-08-23 14:41:01,050 - services - INFO - Adding diaria for standby/airport duty day 2025-08-04 due to midnight landing from 2025-08-03
+2025-08-23 14:41:01,050 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-18
+2025-08-23 14:41:01,050 - services - INFO - Adding diaria for standby/airport duty day 2025-08-18 due to midnight landing from 2025-08-17
+2025-08-23 14:41:01,051 - services - INFO - Midnight crossing detected by symbol for standby day 2025-08-26
+2025-08-23 14:41:01,051 - services - INFO - Adding diaria for standby/airport duty day 2025-08-26 due to midnight landing from 2025-08-25
+2025-08-23 14:41:01,051 - services - INFO - Total midnight standby days found: 3
+2025-08-23 14:41:01,090 - utils - INFO - Salary calculation completed successfully
+2025-08-23 14:43:07,863 - utils - INFO - Application initialized successfully
+2025-08-23 14:43:12,641 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-23 14:43:14,185 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-23 14:43:14,190 - services - INFO - No month filtering - processing all dates
+2025-08-23 14:43:14,190 - services - INFO - Processed 32/32 days, generated 59 schedule entries
+2025-08-23 14:43:14,222 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-23 14:43:14,222 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:30:00, next day start 2025-08-18 00:00:00
+2025-08-23 14:43:14,222 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-23 14:43:14,248 - services - INFO - Found blocking standby code 'LSBY' in raw text on 2025-08-04
+2025-08-23 14:43:14,248 - services - INFO - MXP payment blocked due to presence of standby code
+2025-08-23 14:43:14,294 - utils - INFO - Salary calculation completed successfully
+2025-08-23 14:43:53,811 - utils - INFO - Application initialized successfully
+2025-08-23 14:44:37,495 - utils - INFO - Successfully loaded roster file with latin1 encoding
+2025-08-23 14:44:38,745 - utils - INFO - Month filtering disabled - processing all dates
+2025-08-23 14:44:38,760 - services - INFO - No month filtering - processing all dates
+2025-08-23 14:44:38,760 - services - INFO - Processed 32/32 days, generated 59 schedule entries
+2025-08-23 14:44:38,776 - services - INFO - Extra diaria added for 2025-08-04 - landing at 2025-08-04 02:07:00, next day start 2025-08-04 00:00:00
+2025-08-23 14:44:38,776 - services - INFO - Extra diaria added for 2025-08-18 - landing at 2025-08-18 01:30:00, next day start 2025-08-18 00:00:00
+2025-08-23 14:44:38,776 - services - INFO - Extra diaria added for 2025-08-26 - landing at 2025-08-26 00:45:00, next day start 2025-08-26 00:00:00
+2025-08-23 14:44:38,805 - services - INFO - Found blocking standby code 'LSBY' in raw text on 2025-08-04
+2025-08-23 14:44:38,805 - services - INFO - MXP payment blocked due to presence of standby code
+2025-08-23 14:44:38,872 - utils - INFO - Salary calculation completed successfully

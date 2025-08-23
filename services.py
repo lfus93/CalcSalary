@@ -844,6 +844,44 @@ class SalaryCalculatorService:
         self.logger.info(f"Total midnight standby days found: {midnight_days}")
         return midnight_days, midnight_standby_dates
     
+    def _has_mxp_standby_code(self, data: Dict[str, Any], home_base: str) -> bool:
+        """Check if roster contains standby codes that should block MXP payment"""
+        if home_base != "MXP":
+            return False
+            
+        # Standby codes that should block MXP payment
+        blocking_standby_codes = {"PSBL", "PSBE", "LSBY", "ESBY", "CSBE"}
+        
+        schedule = data.get('dailySchedule', [])
+        
+        for day in schedule:
+            duty = day.get('duty', {})
+            duty_type = duty.get('type', '')
+            duty_description = duty.get('description', '')
+            raw_text = day.get('raw_text', '')
+            
+            self.logger.debug(f"Checking day {day.get('date')}: type={duty_type}, desc={duty_description}")
+            
+            # Check if this day has any blocking standby codes
+            if duty_type == "Standby":
+                # Extract the standby code from description or check if it matches blocked types
+                if any(code in duty_description for code in blocking_standby_codes):
+                    self.logger.info(f"Found blocking standby code on {day.get('date')}: {duty_description}")
+                    return True
+                    
+                # Also check for "MXP Standby" specifically
+                if "MXP Standby" in duty_description:
+                    self.logger.info(f"Found MXP Standby on {day.get('date')}: {duty_description}")
+                    return True
+            
+            # Also check the raw text for standby codes directly
+            for code in blocking_standby_codes:
+                if code in raw_text:
+                    self.logger.info(f"Found blocking standby code '{code}' in raw text on {day.get('date')}")
+                    return True
+        
+        return False
+    
     def _calculate_airport_duty_sectors(self, duty: Dict[str, Any]) -> float:
         """Calculate sectors for airport duty based on hours and if called"""
         # Default assumption: 4 hours if not specified
@@ -938,6 +976,31 @@ class SalaryCalculatorService:
                                    sector_value: float, night_stop_bonus: float, 
                                    total_ido_bonus: float, data: Dict[str, Any]) -> SalaryCalculation:
         """Calculate all salary components"""
+        
+        # Check for MXP standby days that should block payment
+        has_mxp_standby = self._has_mxp_standby_code(data, profile.home_base)
+        
+        if has_mxp_standby and profile.home_base == "MXP":
+            self.logger.info("MXP payment blocked due to presence of standby code")
+            # Return zero salary calculation when MXP payment should be blocked
+            return SalaryCalculation(
+                gross_total=0.0,
+                net_estimated=0.0,
+                operational_sectors_earnings=0.0,
+                positioning_earnings=0.0,
+                frv_bonus=0.0,
+                snc_compensation=0.0,
+                vacation_compensation=0.0,
+                vacation_days=0,
+                taxable_income=0.0,
+                contribution_base=0.0,
+                estimated_tax=0.0,
+                social_contributions=0.0,
+                working_days=0,
+                base_working_days=0,
+                midnight_standby_days=0,
+                midnight_standby_dates=set()
+            )
         
         # Calculate extra position bonus
         extra_percentage = SalaryConfig.EXTRA_POSITIONS[profile.extra_position]
