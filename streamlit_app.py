@@ -91,27 +91,44 @@ def main():
         uploaded_file = st.file_uploader(
             "Upload Roster File (.txt)",
             type=['txt'],
-            help="Select your pilot roster text file"
+            help="Select your pilot roster text file",
+            accept_multiple_files=False,
+            key="roster_file_upload"
         )
     
     # Main content area
     if uploaded_file is not None:
+        # Display file info for mobile debugging
+        st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size} bytes)")
+        
         try:
             # Read the uploaded file with multiple encoding attempts
-            file_bytes = uploaded_file.read()
+            file_bytes = uploaded_file.getvalue()  # Use getvalue() instead of read() for mobile compatibility
             file_content = None
+            
+            if len(file_bytes) == 0:
+                st.error("The uploaded file is empty. Please check your file and try again.")
+                return
             
             # Try different encodings
             for encoding in ['utf-8', 'latin-1', 'cp1252', 'windows-1252']:
                 try:
                     file_content = file_bytes.decode(encoding)
-                    st.success(f"File loaded successfully using {encoding} encoding")
+                    if debug_mode:
+                        st.success(f"File loaded successfully using {encoding} encoding")
                     break
                 except UnicodeDecodeError:
+                    if debug_mode:
+                        st.warning(f"Failed to decode with {encoding}")
                     continue
             
             if file_content is None:
                 st.error("Could not decode the file. Please check the file encoding.")
+                return
+                
+            # Validate file content
+            if len(file_content.strip()) == 0:
+                st.error("The file appears to be empty or contains only whitespace.")
                 return
             
             # Create pilot profile
@@ -216,8 +233,18 @@ def main():
                 st.exception(e)
     
     else:
-        # Welcome message
+        # Welcome message with mobile-specific instructions
         st.info("👈 Please upload a roster file from the sidebar to begin calculation")
+        
+        # Add mobile-specific help
+        st.markdown("### 📱 Mobile Upload Tips")
+        st.markdown("""
+        - **File Selection**: Tap the upload area and select "Choose Files"
+        - **File Location**: Files may be in Downloads, Documents, or Files app
+        - **File Format**: Ensure your file is a .txt file
+        - **File Size**: Check that the file is not empty (should show file size after selection)
+        - **Refresh**: If nothing happens after selection, try refreshing the page
+        """)
         
         # Display sample information
         st.markdown("## 📖 How to Use")
