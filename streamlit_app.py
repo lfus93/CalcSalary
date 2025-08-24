@@ -34,6 +34,11 @@ def main():
         initial_sidebar_state="expanded"
     )
     
+    # Initialize session state to fix mobile upload issues
+    if 'initialized' not in st.session_state:
+        st.session_state.initialized = True
+        st.session_state.file_upload_key = 0
+    
     st.title("✈️ Advanced Pilot Salary Calculator v2.0")
     st.markdown("---")
     
@@ -87,49 +92,105 @@ def main():
         st.markdown("---")
         st.header("File Upload")
         
-        # File upload
-        uploaded_file = st.file_uploader(
-            "Upload Roster File (.txt)",
-            type=['txt'],
-            help="Select your pilot roster text file",
-            accept_multiple_files=False,
-            key="roster_file_upload"
+        # Add mobile fallback option
+        upload_method = st.radio(
+            "Upload Method:",
+            ["File Upload", "Text Input (Mobile Fallback)"],
+            help="Use 'Text Input' if file upload doesn't work on mobile"
         )
+        
+        uploaded_file = None
+        manual_text = None
+        
+        if upload_method == "File Upload":
+            # Add a button to reset file uploader if needed
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                if st.button("🔄 Reset", help="Reset file uploader if stuck"):
+                    st.session_state.file_upload_key += 1
+                    st.rerun()
+            
+            with col1:
+                # File upload with dynamic key for reset functionality
+                uploaded_file = st.file_uploader(
+                    "Upload Roster File (.txt)",
+                    type=['txt'],
+                    help="Select your pilot roster text file",
+                    accept_multiple_files=False,
+                    key=f"roster_file_upload_{st.session_state.file_upload_key}"
+                )
+        else:
+            # Manual text input fallback for mobile
+            manual_text = st.text_area(
+                "Paste your roster text here:",
+                height=200,
+                help="Copy and paste the contents of your roster file here",
+                key="manual_text_input"
+            )
+    
+    # Debug info for mobile
+    if debug_mode:
+        st.write("Debug: File uploader state:", uploaded_file is not None)
+        if uploaded_file is not None:
+            st.write(f"Debug: File object type: {type(uploaded_file)}")
+            st.write(f"Debug: File attributes: {dir(uploaded_file)}")
     
     # Main content area
-    if uploaded_file is not None:
-        # Display file info for mobile debugging
-        st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size} bytes)")
+    if uploaded_file is not None or (manual_text and len(manual_text.strip()) > 0):
+        file_content = None
         
-        try:
-            # Read the uploaded file with multiple encoding attempts
-            file_bytes = uploaded_file.getvalue()  # Use getvalue() instead of read() for mobile compatibility
-            file_content = None
+        if uploaded_file is not None:
+            # Display file info for mobile debugging
+            st.info(f"📁 File: {uploaded_file.name} ({uploaded_file.size} bytes)")
             
-            if len(file_bytes) == 0:
-                st.error("The uploaded file is empty. Please check your file and try again.")
-                return
+            # Additional mobile debugging
+            st.write("✅ File successfully uploaded!")
+            if debug_mode:
+                st.write(f"Debug: File type: {uploaded_file.type}")
+                st.write(f"Debug: File size: {uploaded_file.size}")
             
-            # Try different encodings
-            for encoding in ['utf-8', 'latin-1', 'cp1252', 'windows-1252']:
-                try:
-                    file_content = file_bytes.decode(encoding)
-                    if debug_mode:
-                        st.success(f"File loaded successfully using {encoding} encoding")
-                    break
-                except UnicodeDecodeError:
-                    if debug_mode:
-                        st.warning(f"Failed to decode with {encoding}")
-                    continue
-            
-            if file_content is None:
-                st.error("Could not decode the file. Please check the file encoding.")
+            try:
+                # Read the uploaded file with multiple encoding attempts
+                file_bytes = uploaded_file.getvalue()  # Use getvalue() instead of read() for mobile compatibility
+                
+                if len(file_bytes) == 0:
+                    st.error("The uploaded file is empty. Please check your file and try again.")
+                    return
+                
+                # Try different encodings
+                for encoding in ['utf-8', 'latin-1', 'cp1252', 'windows-1252']:
+                    try:
+                        file_content = file_bytes.decode(encoding)
+                        if debug_mode:
+                            st.success(f"File loaded successfully using {encoding} encoding")
+                        break
+                    except UnicodeDecodeError:
+                        if debug_mode:
+                            st.warning(f"Failed to decode with {encoding}")
+                        continue
+                
+                if file_content is None:
+                    st.error("Could not decode the file. Please check the file encoding.")
+                    return
+                    
+            except Exception as e:
+                st.error(f"Error reading file: {str(e)}")
+                if debug_mode:
+                    st.exception(e)
                 return
                 
-            # Validate file content
-            if len(file_content.strip()) == 0:
-                st.error("The file appears to be empty or contains only whitespace.")
-                return
+        else:
+            # Handle manual text input
+            file_content = manual_text.strip()
+            st.info("📝 Text input received")
+            st.write("✅ Content successfully loaded!")
+        
+        # Validate file content
+        if len(file_content.strip()) == 0:
+            st.error("The content appears to be empty. Please check your input.")
+            return
+        
+        try:
             
             # Create pilot profile
             profile = PilotProfile(
@@ -243,7 +304,8 @@ def main():
         - **File Location**: Files may be in Downloads, Documents, or Files app
         - **File Format**: Ensure your file is a .txt file
         - **File Size**: Check that the file is not empty (should show file size after selection)
-        - **Refresh**: If nothing happens after selection, try refreshing the page
+        - **Reset Button**: If upload gets stuck, use the 🔄 Reset button
+        - **Fallback**: If file upload fails, use "Text Input (Mobile Fallback)" option
         """)
         
         # Display sample information
