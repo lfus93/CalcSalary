@@ -525,6 +525,10 @@ class SalaryCalculatorService:
         if distance <= 0:
             return 0.0
         
+        # Handle same-airport flights (distance < 0.1 NM due to floating point precision)
+        if distance < 0.1:
+            return 0.0
+        
         for min_dist, max_dist, value in SalaryConfig.SECTOR_VALUES:
             if min_dist < distance <= max_dist:
                 return value

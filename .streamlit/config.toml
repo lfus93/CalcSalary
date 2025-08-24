@@ -1,6 +1,7 @@
 [server]
 headless = true
 port = 8501
+fileWatcherType = "none"
 
 [theme]
 primaryColor = "#1f77b4"
@@ -10,3 +11,6 @@ textColor = "#262730"
 
 [browser]
 gatherUsageStats = false
+
+[global]
+disableWatchdogWarning = true
