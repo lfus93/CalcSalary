@@ -326,17 +326,6 @@ def display_results(detailed_df: pd.DataFrame, grouped_df: pd.DataFrame,
     with tab3:
         st.subheader("Complete Salary Breakdown")
         
-        # Debug information
-        st.write("**Debug Information:**")
-        st.write(f"Gross Total: €{salary_calc.gross_total:,.2f}")
-        st.write(f"Operational Sectors: €{salary_calc.operational_sectors_earnings:,.2f}")  
-        st.write(f"Positioning: €{salary_calc.positioning_earnings:,.2f}")
-        st.write(f"FRV Bonus: €{salary_calc.frv_bonus:,.2f}")
-        st.write(f"SNC Compensation: €{salary_calc.snc_compensation:,.2f}")
-        st.write(f"Vacation Compensation: €{salary_calc.vacation_compensation:,.2f}")
-        st.write(f"Night Stop Bonus: €{night_stop_bonus:,.2f}")
-        st.write(f"IDO Bonuses: €{sum(b.amount for b in ido_bonuses):,.2f}")
-        
         # Use already calculated diaria values
         
         # Create breakdown
