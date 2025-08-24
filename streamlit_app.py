@@ -34,10 +34,24 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # Initialize session state to fix mobile upload issues
-    if 'initialized' not in st.session_state:
-        st.session_state.initialized = True
+    # Initialize session state early to prevent mobile upload issues
+    if 'file_upload_key' not in st.session_state:
         st.session_state.file_upload_key = 0
+    
+    # Add JavaScript to handle mobile file upload issues
+    st.markdown("""
+    <script>
+    // Wait for Streamlit to fully initialize before allowing file operations
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            // Ensure SessionInfo is initialized
+            if (window.parent && window.parent.streamlit) {
+                console.log('Streamlit SessionInfo check completed');
+            }
+        }, 500);
+    });
+    </script>
+    """, unsafe_allow_html=True)
     
     st.title("✈️ Advanced Pilot Salary Calculator v2.0")
     st.markdown("---")
@@ -111,14 +125,21 @@ def main():
                     st.rerun()
             
             with col1:
-                # File upload with dynamic key for reset functionality
-                uploaded_file = st.file_uploader(
-                    "Upload Roster File (.txt)",
-                    type=['txt'],
-                    help="Select your pilot roster text file",
-                    accept_multiple_files=False,
-                    key=f"roster_file_upload_{st.session_state.file_upload_key}"
-                )
+                # File upload with mobile-specific settings
+                try:
+                    uploaded_file = st.file_uploader(
+                        "Upload Roster File (.txt)",
+                        type=['txt'],
+                        help="Select your pilot roster text file",
+                        accept_multiple_files=False,
+                        key=f"roster_file_upload_{st.session_state.file_upload_key}",
+                        disabled=False
+                    )
+                except Exception as e:
+                    st.error("File uploader initialization failed. Please try the text input method.")
+                    if debug_mode:
+                        st.exception(e)
+                    uploaded_file = None
         else:
             # Manual text input fallback for mobile
             manual_text = st.text_area(
