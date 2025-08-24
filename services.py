@@ -978,6 +978,10 @@ class SalaryCalculatorService:
                       frv_bonus + vacation_compensation + snc_compensation + 
                       night_stop_bonus + total_ido_bonus)
         
+        # Debug logging for gross total calculation
+        self.logger.info(f"Gross total breakdown: base={final_base:.2f}, allowance={final_allowance:.2f}, sectors={total_sector_earnings:.2f}, frv={frv_bonus:.2f}, vacation={vacation_compensation:.2f}, snc={snc_compensation:.2f}, night_stop={night_stop_bonus:.2f}, ido={total_ido_bonus:.2f}")
+        self.logger.info(f"Final gross_total: €{gross_total:.2f}")
+        
         # Calculate contribution base (matches original exactly)
         contribution_base = (final_base + (final_allowance / 2) + (total_sector_earnings / 2) + 
                            (frv_bonus / 2) + vacation_compensation + night_stop_bonus + 
