@@ -37,18 +37,39 @@ def main():
     # Initialize session state early to prevent mobile upload issues
     if 'file_upload_key' not in st.session_state:
         st.session_state.file_upload_key = 0
+    if 'upload_error_count' not in st.session_state:
+        st.session_state.upload_error_count = 0
+    if 'last_upload_method' not in st.session_state:
+        st.session_state.last_upload_method = "File Upload"
     
     # Add JavaScript to handle mobile file upload issues
     st.markdown("""
     <script>
-    // Wait for Streamlit to fully initialize before allowing file operations
+    // Enhanced mobile compatibility script
     window.addEventListener('load', function() {
+        // Longer delay for slower mobile browsers
         setTimeout(function() {
             // Ensure SessionInfo is initialized
             if (window.parent && window.parent.streamlit) {
                 console.log('Streamlit SessionInfo check completed');
+                
+                // Additional mobile-specific fixes
+                const fileInputs = document.querySelectorAll('input[type="file"]');
+                fileInputs.forEach(function(input) {
+                    // Add mobile-specific event handlers
+                    input.addEventListener('touchstart', function() {
+                        console.log('Mobile file input touched');
+                    });
+                    
+                    // Handle file selection changes more robustly
+                    input.addEventListener('change', function(e) {
+                        if (e.target.files && e.target.files.length > 0) {
+                            console.log('File selected:', e.target.files[0].name);
+                        }
+                    });
+                });
             }
-        }, 500);
+        }, 1000); // Increased timeout for mobile
     });
     </script>
     """, unsafe_allow_html=True)
@@ -100,18 +121,57 @@ def main():
             step=1
         )
         
-        # Debug mode
+        # Debug mode with mobile diagnostics
         debug_mode = st.checkbox("Debug Mode", value=False)
+        
+        if debug_mode:
+            st.markdown("**Debug Information:**")
+            st.write(f"Upload errors encountered: {st.session_state.upload_error_count}")
+            st.write(f"Current upload method: {st.session_state.last_upload_method}")
+            st.write(f"File upload key: {st.session_state.file_upload_key}")
+            
+            # Add mobile detection info
+            st.markdown("**Device Detection:**")
+            st.markdown("""
+            <div id="device-info"></div>
+            <script>
+            const userAgent = navigator.userAgent;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+            const deviceInfo = {
+                userAgent: userAgent,
+                isMobile: isMobile,
+                platform: navigator.platform,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                language: navigator.language
+            };
+            document.getElementById('device-info').innerHTML = 
+                '<pre>' + JSON.stringify(deviceInfo, null, 2) + '</pre>';
+            </script>
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         st.header("File Upload")
         
-        # Add mobile fallback option
+        # Add mobile fallback option with smart suggestions
+        upload_options = ["File Upload", "Text Input (Mobile Fallback)"]
+        
+        # Auto-suggest text input if there have been upload errors
+        if st.session_state.upload_error_count >= 2:
+            default_index = 1  # Text Input
+            st.warning("⚠️ Multiple upload issues detected. Text Input is recommended for mobile devices.")
+        else:
+            default_index = 0 if st.session_state.last_upload_method == "File Upload" else 1
+            
         upload_method = st.radio(
             "Upload Method:",
-            ["File Upload", "Text Input (Mobile Fallback)"],
+            upload_options,
+            index=default_index,
             help="Use 'Text Input' if file upload doesn't work on mobile"
         )
+        
+        # Remember the chosen method
+        st.session_state.last_upload_method = upload_method
         
         uploaded_file = None
         manual_text = None
@@ -136,6 +196,7 @@ def main():
                         disabled=False
                     )
                 except Exception as e:
+                    st.session_state.upload_error_count += 1
                     st.error("File uploader initialization failed. Please try the text input method.")
                     if debug_mode:
                         st.exception(e)
@@ -171,31 +232,82 @@ def main():
                 st.write(f"Debug: File size: {uploaded_file.size}")
             
             try:
-                # Read the uploaded file with multiple encoding attempts
-                file_bytes = uploaded_file.getvalue()  # Use getvalue() instead of read() for mobile compatibility
+                # Enhanced mobile-compatible file reading with multiple fallback methods
+                file_bytes = None
+                file_content = None
                 
-                if len(file_bytes) == 0:
-                    st.error("The uploaded file is empty. Please check your file and try again.")
+                # Method 1: Try getvalue() first (best for mobile)
+                try:
+                    file_bytes = uploaded_file.getvalue()
+                    if debug_mode:
+                        st.info(f"Method 1 (getvalue): Got {len(file_bytes)} bytes")
+                except Exception as e:
+                    if debug_mode:
+                        st.warning(f"Method 1 failed: {str(e)}")
+                
+                # Method 2: Try read() if getvalue() failed
+                if file_bytes is None or len(file_bytes) == 0:
+                    try:
+                        uploaded_file.seek(0)  # Reset file pointer
+                        file_bytes = uploaded_file.read()
+                        if debug_mode:
+                            st.info(f"Method 2 (read): Got {len(file_bytes)} bytes")
+                    except Exception as e:
+                        if debug_mode:
+                            st.warning(f"Method 2 failed: {str(e)}")
+                
+                # Check if we got any data
+                if file_bytes is None or len(file_bytes) == 0:
+                    st.session_state.upload_error_count += 1
+                    st.error("The uploaded file appears to be empty or couldn't be read. Please try:")
+                    st.markdown("""
+                    - Check that the file isn't corrupted
+                    - Try uploading again 
+                    - Use the 'Text Input (Mobile Fallback)' option instead
+                    - Use the 🔄 Reset button if upload seems stuck
+                    """)
                     return
                 
-                # Try different encodings
-                for encoding in ['utf-8', 'latin-1', 'cp1252', 'windows-1252']:
+                # Enhanced encoding detection with more options
+                encoding_attempts = [
+                    'utf-8', 'utf-8-sig', 'latin-1', 'cp1252', 
+                    'windows-1252', 'iso-8859-1', 'ascii'
+                ]
+                
+                for encoding in encoding_attempts:
                     try:
                         file_content = file_bytes.decode(encoding)
-                        if debug_mode:
-                            st.success(f"File loaded successfully using {encoding} encoding")
-                        break
+                        # Validate that we got reasonable text content
+                        if len(file_content.strip()) > 0:
+                            if debug_mode:
+                                st.success(f"File loaded successfully using {encoding} encoding")
+                            break
+                        else:
+                            if debug_mode:
+                                st.warning(f"Encoding {encoding} produced empty content")
                     except UnicodeDecodeError:
                         if debug_mode:
                             st.warning(f"Failed to decode with {encoding}")
                         continue
+                    except Exception as e:
+                        if debug_mode:
+                            st.warning(f"Error with {encoding}: {str(e)}")
+                        continue
                 
-                if file_content is None:
-                    st.error("Could not decode the file. Please check the file encoding.")
+                if file_content is None or len(file_content.strip()) == 0:
+                    st.session_state.upload_error_count += 1
+                    st.error("Could not decode the file content. Please try:")
+                    st.markdown("""
+                    - Save your file as UTF-8 encoding
+                    - Use the 'Text Input (Mobile Fallback)' option
+                    - Copy and paste the file content manually
+                    """)
                     return
                     
             except Exception as e:
+                st.session_state.upload_error_count += 1
                 st.error(f"Error reading file: {str(e)}")
+                st.info("💡 Try the 'Text Input (Mobile Fallback)' option as an alternative")
                 if debug_mode:
                     st.exception(e)
                 return
@@ -210,6 +322,10 @@ def main():
         if len(file_content.strip()) == 0:
             st.error("The content appears to be empty. Please check your input.")
             return
+        
+        # Reset error count on successful file loading
+        if st.session_state.upload_error_count > 0:
+            st.session_state.upload_error_count = 0
         
         try:
             
@@ -318,16 +434,43 @@ def main():
         # Welcome message with mobile-specific instructions
         st.info("👈 Please upload a roster file from the sidebar to begin calculation")
         
-        # Add mobile-specific help
+        # Add mobile-specific help with dynamic suggestions
         st.markdown("### 📱 Mobile Upload Tips")
+        
+        if st.session_state.upload_error_count > 0:
+            st.markdown("**⚠️ You're experiencing upload issues. Try these solutions:**")
+        
         st.markdown("""
-        - **File Selection**: Tap the upload area and select "Choose Files"
-        - **File Location**: Files may be in Downloads, Documents, or Files app
-        - **File Format**: Ensure your file is a .txt file
+        **File Upload Method:**
+        - **File Selection**: Tap the upload area and select "Choose Files" or "Browse Files"
+        - **File Location**: Files may be in Downloads, Documents, Google Drive, or Files app
+        - **File Format**: Ensure your file is a .txt file (not .doc, .docx, or .pdf)
         - **File Size**: Check that the file is not empty (should show file size after selection)
         - **Reset Button**: If upload gets stuck, use the 🔄 Reset button
-        - **Fallback**: If file upload fails, use "Text Input (Mobile Fallback)" option
+        
+        **Alternative Method (Recommended for Mobile):**
+        - Use "Text Input (Mobile Fallback)" option instead
+        - Open your roster file in any text app
+        - Select all text (Ctrl+A or long press → Select All)
+        - Copy the text (Ctrl+C or Copy)
+        - Paste into the text area in this app
+        
+        **Common Mobile Issues:**
+        - Safari on iOS: Try Chrome or Firefox instead
+        - Android: Ensure file permissions are granted
+        - Large files: May timeout on slower connections
         """)
+        
+        # Add browser-specific tips if there have been errors
+        if st.session_state.upload_error_count >= 2:
+            st.markdown("""
+            **🚨 Multiple Issues Detected - Try These Steps:**
+            1. Switch to "Text Input (Mobile Fallback)" method ← **RECOMMENDED**
+            2. Try a different browser (Chrome, Firefox, Safari)
+            3. Check your internet connection stability
+            4. Restart the browser and try again
+            5. Contact support if issues persist
+            """)
         
         # Display sample information
         st.markdown("## 📖 How to Use")
