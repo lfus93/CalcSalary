@@ -154,12 +154,12 @@ def main():
         st.header("File Upload")
         
         # Add mobile fallback option with smart suggestions
-        upload_options = ["File Upload", "Text Input (Mobile Fallback)"]
+        upload_options = ["File Upload", "📱 Copy & Paste Text", "📧 Email Method", "📷 Photo of File"]
         
         # Auto-suggest text input if there have been upload errors
         if st.session_state.upload_error_count >= 2:
-            default_index = 1  # Text Input
-            st.warning("⚠️ Multiple upload issues detected. Text Input is recommended for mobile devices.")
+            default_index = 1  # Copy & Paste
+            st.warning("⚠️ Multiple upload issues detected. Copy & Paste is recommended for mobile devices.")
         else:
             default_index = 0 if st.session_state.last_upload_method == "File Upload" else 1
             
@@ -167,7 +167,7 @@ def main():
             "Upload Method:",
             upload_options,
             index=default_index,
-            help="Use 'Text Input' if file upload doesn't work on mobile"
+            help="Multiple ways to get your roster data into the app"
         )
         
         # Remember the chosen method
@@ -185,12 +185,31 @@ def main():
                     st.rerun()
             
             with col1:
-                # File upload with mobile-specific settings
+                # Mobile-optimized file upload with better compatibility
                 try:
+                    # Add mobile-specific HTML to improve file picker
+                    st.markdown("""
+                    <style>
+                    /* Mobile file input improvements */
+                    .stFileUploader > div > div > div > div {
+                        font-size: 16px !important; /* Prevents iOS zoom on focus */
+                    }
+                    .stFileUploader input[type="file"] {
+                        -webkit-appearance: none;
+                        appearance: none;
+                    }
+                    /* Better touch targets for mobile */
+                    .stFileUploader > div > div {
+                        min-height: 50px;
+                        padding: 10px;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
                     uploaded_file = st.file_uploader(
-                        "Upload Roster File (.txt)",
+                        "📁 Upload Roster File (.txt)",
                         type=['txt'],
-                        help="Select your pilot roster text file",
+                        help="Tap here to select your roster text file from your device",
                         accept_multiple_files=False,
                         key=f"roster_file_upload_{st.session_state.file_upload_key}",
                         disabled=False
@@ -201,14 +220,177 @@ def main():
                     if debug_mode:
                         st.exception(e)
                     uploaded_file = None
-        else:
-            # Manual text input fallback for mobile
+                    
+                # Add mobile-specific file input as fallback
+                if uploaded_file is None:
+                    st.markdown("**Alternative Mobile File Input:**")
+                    st.markdown("""
+                    <div id="mobile-file-input">
+                        <input type="file" id="mobile-file" accept=".txt,text/plain" 
+                               style="width: 100%; padding: 10px; font-size: 16px; 
+                                      border: 2px dashed #ccc; border-radius: 5px;
+                                      cursor: pointer;" 
+                               onchange="handleMobileFile(this)">
+                        <div id="file-content" style="display: none;"></div>
+                    </div>
+                    
+                    <script>
+                    function handleMobileFile(input) {
+                        const file = input.files[0];
+                        if (file && file.type === 'text/plain') {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const content = e.target.result;
+                                document.getElementById('file-content').innerText = content;
+                                
+                                // Try to trigger Streamlit update
+                                const event = new CustomEvent('mobile-file-loaded', {
+                                    detail: { content: content, fileName: file.name }
+                                });
+                                window.dispatchEvent(event);
+                                
+                                // Show success message
+                                alert('File loaded! Please switch to "📱 Copy & Paste Text" and paste the content.');
+                            };
+                            reader.readAsText(file);
+                        } else {
+                            alert('Please select a .txt file');
+                        }
+                    }
+                    </script>
+                    """, unsafe_allow_html=True)
+                    
+                    st.info("💡 If file upload doesn't work, try the alternative input above or use Copy & Paste method.")
+                    
+                    # Add drag and drop zone for mobile
+                    st.markdown("**📱 Mobile Drag & Drop Zone:**")
+                    st.markdown("""
+                    <div id="drop-zone" 
+                         style="width: 100%; height: 80px; border: 2px dashed #007bff; 
+                                border-radius: 10px; text-align: center; padding: 20px; 
+                                margin: 10px 0; cursor: pointer; background: #f8f9fa;"
+                         onclick="document.getElementById('mobile-file').click()"
+                         ondrop="dropHandler(event);" 
+                         ondragover="dragOverHandler(event);">
+                        <p style="margin: 0; color: #007bff; font-weight: bold;">
+                            📁 Tap here to select file or drag & drop
+                        </p>
+                        <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">
+                            Supports .txt files only
+                        </p>
+                    </div>
+                    
+                    <script>
+                    function dragOverHandler(ev) {
+                        ev.preventDefault();
+                        ev.currentTarget.style.background = '#e7f3ff';
+                    }
+                    
+                    function dropHandler(ev) {
+                        ev.preventDefault();
+                        ev.currentTarget.style.background = '#f8f9fa';
+                        
+                        const files = ev.dataTransfer.files;
+                        if (files.length > 0) {
+                            const file = files[0];
+                            if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+                                handleMobileFile({files: [file]});
+                            } else {
+                                alert('Please drop a .txt file');
+                            }
+                        }
+                    }
+                    </script>
+                    """, unsafe_allow_html=True)
+        elif upload_method == "📱 Copy & Paste Text":
+            # Enhanced mobile copy/paste with detailed instructions
+            st.markdown("### 📱 Mobile Copy & Paste Guide")
+            
+            # Create tabs for different platforms
+            ios_tab, android_tab = st.tabs(["📱 iOS (iPhone/iPad)", "🤖 Android"])
+            
+            with ios_tab:
+                st.markdown("""
+                **Step-by-Step for iOS:**
+                1. **Open your roster file** in Files app, Notes, Mail, or any text app
+                2. **Select all text** using one of these methods:
+                   - **Triple-tap** anywhere in the text to select all
+                   - **Double-tap** a word, then drag the blue handles to select all
+                   - **Long press** and select "Select All" from popup menu
+                3. **Copy the text**:
+                   - **3-finger pinch** gesture (iOS 13+) - pinch inward with thumb + 2 fingers
+                   - OR tap "Copy" from the popup menu
+                4. **Switch back** to this app in your browser
+                5. **Paste below**:
+                   - **3-finger pinch out** gesture to paste
+                   - OR long press in text area and select "Paste"
+                """)
+            
+            with android_tab:
+                st.markdown("""
+                **Step-by-Step for Android:**
+                1. **Open your roster file** in any text app (Gmail, Drive, Notes, etc.)
+                2. **Select all text**:
+                   - **Long press** on the text until selection handles appear
+                   - Drag handles to select all text, or tap "Select All"
+                   - Use **Ctrl+A** if using external keyboard
+                3. **Copy the text**:
+                   - Tap the **Copy** icon or "Copy" from menu
+                   - Text is saved to clipboard
+                4. **Switch back** to this app in your browser
+                5. **Paste below**:
+                   - **Long press** in the text area below
+                   - Tap "Paste" when it appears
+                """)
+            
+            st.markdown("---")
+            
+            # Enhanced text area with better mobile support
             manual_text = st.text_area(
-                "Paste your roster text here:",
-                height=200,
-                help="Copy and paste the contents of your roster file here",
-                key="manual_text_input"
+                "📝 Paste your roster text here:",
+                height=300,
+                help="Long press and select Paste, or use 3-finger pinch out on iOS",
+                key="mobile_text_input",
+                placeholder="Your roster text will appear here after pasting...\n\nTip: Make sure you copied ALL the text from your roster file."
             )
+            
+            # Add paste verification
+            if manual_text and len(manual_text.strip()) > 0:
+                word_count = len(manual_text.split())
+                line_count = len(manual_text.splitlines())
+                st.success(f"✅ Text pasted successfully! ({word_count} words, {line_count} lines)")
+                
+                # Quick validation
+                if "flight" in manual_text.lower() or "roster" in manual_text.lower() or any(char.isdigit() for char in manual_text):
+                    st.info("✈️ Looks like roster data - ready to process!")
+                else:
+                    st.warning("⚠️ This doesn't look like roster data. Make sure you copied the right text.")
+                    
+        elif upload_method == "📧 Email Method":
+            st.markdown("### 📧 Email Method")
+            st.info("📧 **Coming Soon**: Send your roster file to a special email address and get the text extracted automatically.")
+            st.markdown("""
+            **How it will work:**
+            1. Email your roster file to: `roster@yourdomain.com`
+            2. Get a reply with the extracted text
+            3. Copy and paste the text here
+            
+            For now, please use the **Copy & Paste** method above.
+            """)
+            manual_text = None
+            
+        elif upload_method == "📷 Photo of File":
+            st.markdown("### 📷 Photo Text Recognition")
+            st.info("📷 **Coming Soon**: Take a photo of your roster file and extract the text automatically.")
+            st.markdown("""
+            **How it will work:**
+            1. Take a clear photo of your roster text
+            2. Upload the photo here
+            3. AI will extract the text automatically
+            
+            For now, please use the **Copy & Paste** method above.
+            """)
+            manual_text = None
     
     # Debug info for mobile
     if debug_mode:
@@ -441,24 +623,27 @@ def main():
             st.markdown("**⚠️ You're experiencing upload issues. Try these solutions:**")
         
         st.markdown("""
-        **File Upload Method:**
+        **📱 Copy & Paste Method (RECOMMENDED):**
+        - Choose "📱 Copy & Paste Text" option above
+        - Follow the iOS or Android specific instructions
+        - No file upload needed - just copy and paste!
+        
+        **File Upload Method (Desktop/Laptop):**
         - **File Selection**: Tap the upload area and select "Choose Files" or "Browse Files"
         - **File Location**: Files may be in Downloads, Documents, Google Drive, or Files app
         - **File Format**: Ensure your file is a .txt file (not .doc, .docx, or .pdf)
         - **File Size**: Check that the file is not empty (should show file size after selection)
         - **Reset Button**: If upload gets stuck, use the 🔄 Reset button
         
-        **Alternative Method (Recommended for Mobile):**
-        - Use "Text Input (Mobile Fallback)" option instead
-        - Open your roster file in any text app
-        - Select all text (Ctrl+A or long press → Select All)
-        - Copy the text (Ctrl+C or Copy)
-        - Paste into the text area in this app
+        **Mobile Touch Gestures:**
+        - **iOS**: Use 3-finger pinch to copy, 3-finger pinch out to paste
+        - **Android**: Long press to select, tap Copy/Paste from menu
+        - **Select All**: Triple-tap (iOS) or long press + "Select All" (Android)
         
         **Common Mobile Issues:**
         - Safari on iOS: Try Chrome or Firefox instead
         - Android: Ensure file permissions are granted
-        - Large files: May timeout on slower connections
+        - File uploads often fail on mobile - use Copy & Paste instead!
         """)
         
         # Add browser-specific tips if there have been errors
