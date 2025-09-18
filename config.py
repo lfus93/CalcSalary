@@ -50,7 +50,7 @@ class SalaryConfig:
     ]
     
     # Multipliers and rates
-    SNC_SECTOR_MULTIPLIER = 3
+    SNC_SECTOR_MULTIPLIER = 63.16
     VACATION_PAY_MULTIPLIER = 3.5
     NIGHT_STOP_BONUS_MULTIPLIER = 2
     OVERTIME_SECTOR_MULTIPLIER = 2

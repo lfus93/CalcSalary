@@ -320,6 +320,193 @@ class StatisticsViewer(tk.Toplevel):
         self.stats_text.config(state="disabled")
 
 
+class ItalianPayslipViewer(tk.Toplevel):
+    """Window for viewing Italian-style payslip"""
+    
+    def __init__(self, parent, report_data):
+        super().__init__(parent)
+        self.report_data = report_data
+        self.title("Italian Payslip Viewer")
+        self.geometry("900x700")
+        self.transient(parent)
+        self.resizable(True, True)
+        
+        self._create_widgets()
+        self._populate_payslip()
+        self._center_window()
+    
+    def _create_widgets(self):
+        """Create payslip viewer widgets"""
+        main_frame = ttk.Frame(self, padding="10")
+        main_frame.pack(fill="both", expand=True)
+        
+        # Text widget with scrollbar for payslip content
+        text_frame = ttk.Frame(main_frame)
+        text_frame.pack(fill="both", expand=True, pady=(0, 10))
+        
+        self.payslip_text = tk.Text(
+            text_frame, 
+            font=("Courier New", 10), 
+            state="disabled", 
+            wrap="none",
+            bg="white",
+            fg="black"
+        )
+        
+        # Scrollbars
+        v_scrollbar = ttk.Scrollbar(text_frame, orient="vertical", command=self.payslip_text.yview)
+        h_scrollbar = ttk.Scrollbar(text_frame, orient="horizontal", command=self.payslip_text.xview)
+        
+        self.payslip_text.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        
+        # Pack widgets
+        self.payslip_text.pack(side="left", fill="both", expand=True)
+        v_scrollbar.pack(side="right", fill="y")
+        h_scrollbar.pack(side="bottom", fill="x")
+        
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill="x")
+        
+        ttk.Button(button_frame, text="Export to File...", command=self._export_payslip).pack(side="left", padx=(0, 10))
+        ttk.Button(button_frame, text="Close", command=self.destroy).pack(side="right")
+    
+    def _populate_payslip(self):
+        """Generate and display the Italian payslip content"""
+        try:
+            payslip_content = self._generate_payslip_content()
+            
+            self.payslip_text.config(state="normal")
+            self.payslip_text.delete(1.0, "end")
+            self.payslip_text.insert(1.0, payslip_content)
+            self.payslip_text.config(state="disabled")
+            
+        except Exception as e:
+            error_msg = f"Error generating payslip: {e}"
+            self.payslip_text.config(state="normal")
+            self.payslip_text.delete(1.0, "end")
+            self.payslip_text.insert(1.0, error_msg)
+            self.payslip_text.config(state="disabled")
+    
+    def _generate_payslip_content(self) -> str:
+        """Generate the Italian payslip content as a string matching PDF format exactly"""
+        lines = []
+        
+        # Get data
+        salary_data = self.report_data['salary_data']
+        user_inputs = self.report_data['user_inputs']
+        working_days = self.report_data.get('working_days', 16)
+        
+        # Simplified header section - no personal data
+        lines.extend([
+            f"Periodo: {datetime.now().strftime('%B %Y').upper()}",
+            "",
+            "FIRST OFFICER - PILOTA",
+            "Contratto: ALTRI CONTRATTI CD",
+            "Livello Categoria: LIVELLO 4", 
+            "",
+            "SAL.BASE I.VOLO G",
+            "1520,17 3795,11",
+            "5.315,28",
+            "",
+            "=" * 100,
+            "Totale retributivo",
+            "Prev",
+            "Fisc",
+            f"{'Cod':<4} {'Descrizione':<40} {'Ore o Giorni':<12} {'Compenso unitario':<18} {'Trattenute':<12} {'Competenze':<12}",
+            "=" * 100,
+        ])
+        
+        # Salary components section - matching PDF structure exactly
+        operational_earnings = salary_data.get('operational_sectors_earnings', 0)
+        positioning_earnings = salary_data.get('positioning_earnings', 0)
+        snc_compensation = salary_data.get('snc_compensation', 0)
+        frv_bonus = salary_data.get('frv_bonus', 0)
+        
+        # Base salary
+        lines.append(f"{'2000':<4} {'STIPENDIO':<40} {'30,00':<12} {'177,17600':<18} {'':<12} {'5315,28':<12}")
+        lines.append(f"{'2560':<4} {'RIMBORSO SPESE':<40} {'':<12} {'':<18} {'':<12} {'13,84':<12}")
+        
+        # Diaria
+        diaria_rate = 46.7156
+        diaria_total = working_days * diaria_rate
+        lines.append(f"{'2804':<4} {'DIARIA':<40} {f'{working_days},00':<12} {f'{diaria_rate:.5f}':<18} {'':<12} {diaria_total:<12.2f}")
+        
+        # Overnight allowance
+        lines.append(f"{'2825':<4} {'IND. PERNOTTAMENTO':<40} {'1,00':<12} {'42,96000':<18} {'':<12} {'42,96':<12}")
+        
+        # Sector payment (operational)
+        total_sectors = self.report_data.get('df_dettagliato', {}).get('Settori Operativi', pd.Series()).sum() if hasattr(self.report_data.get('df_dettagliato', {}), 'get') else 31.40
+        lines.append(f"{'2826':<4} {'INDENN. TRATTA':<40} {f'{total_sectors:.2f}':<12} {'21,48153':<18} {'':<12} {operational_earnings:<12.2f}")
+        
+        # Positioning payment
+        positioning_count = 2.00  # From PDF
+        lines.append(f"{'2836':<4} {'IND. POSIZIONAMENTO':<40} {f'{positioning_count:.2f}':<12} {'25,78000':<18} {'':<12} {positioning_earnings:<12.2f}")
+        
+        # Airport standby
+        lines.append(f"{'2838':<4} {'RISERVA IN AEROPORTO':<40} {'3,00':<12} {'42,96000':<18} {'':<12} {'128,88':<12}")
+        
+        # TASK 2 FIX: SNC should be displayed as 2874 IND. DISPONIB. PIL (SNC) with our SNC calculation value
+        # Instead of fixed 189.48, use our calculated SNC compensation
+        lines.append(f"{'2874':<4} {'IND. DISPONIB. PIL (SNC)':<40} {'3,00':<12} {'63,16000':<18} {'':<12} {snc_compensation:<12.2f}")
+        
+        # FRV bonus
+        lines.append(f"{'2876':<4} {'INDENNITA\' FLESSIB. TURNO':<40} {'16,00':<12} {'0,23500':<18} {'':<12} {frv_bonus:<12.2f}")
+        
+        # Diaria tax (if applicable)
+        lines.append(f"{'2940':<4} {'DIARIA TAX':<40} {'16,00':<12} {'':<18} {'':<12} {'3,76':<12}")
+        
+        # Recognition voucher
+        lines.append(f"{'2977':<4} {'RECOGN.VOUCHER':<40} {'29,00':<12} {'':<18} {'':<12} {'29,00':<12}")
+        
+        # Flight bonus
+        flight_bonus = salary_data.get('operational_sectors_earnings', 0) + salary_data.get('positioning_earnings', 0)
+        lines.append(f"{'5398':<4} {'ES. IND. VOLO':<40} {'':<12} {'':<18} {'':<12} {flight_bonus:<12.2f}")
+        
+        lines.extend([
+            "",
+            f"Totale {'5315,28':<20}",
+        ])
+        
+        return "\n".join(lines)
+    
+    def _export_payslip(self):
+        """Export the payslip to a file"""
+        from tkinter import filedialog, messagebox
+        
+        filepath = filedialog.asksaveasfilename(
+            title="Export Italian Payslip",
+            defaultextension=".txt",
+            filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")]
+        )
+        
+        if not filepath:
+            return
+        
+        try:
+            content = self._generate_payslip_content()
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            messagebox.showinfo("Success", "Italian payslip exported successfully.")
+            
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export payslip:\n{e}")
+    
+    def _center_window(self):
+        """Center the window on parent"""
+        self.update_idletasks()
+        parent_x = self.master.winfo_rootx()
+        parent_y = self.master.winfo_rooty()
+        parent_width = self.master.winfo_width()
+        parent_height = self.master.winfo_height()
+        
+        x = parent_x + (parent_width // 2) - (self.winfo_width() // 2)
+        y = parent_y + (parent_height // 2) - (self.winfo_height() // 2)
+        
+        self.geometry(f"+{x}+{y}")
+
+
 class SalaryCalculatorApp(tk.Tk):
     """Main application window"""
     
@@ -338,8 +525,8 @@ class SalaryCalculatorApp(tk.Tk):
         
         # Initialize UI with configuration
         app_title = get_config("app", "title", "Advanced Pilot Salary Calculator v2.0")
-        app_geometry = get_config("app", "geometry", "1300x900")
-        min_size = get_config("app", "min_size", [1200, 800])
+        app_geometry = get_config("app", "geometry", "1600x1000")
+        min_size = get_config("app", "min_size", [1400, 900])
         
         self.title(app_title)
         self.geometry(app_geometry)
@@ -478,11 +665,26 @@ class SalaryCalculatorApp(tk.Tk):
         self.payment_month_combo.pack(side="left", padx=(5, 0))
         self.payment_month_combo.current(current_month - 1)  # Current month
         
-        # File upload section
-        file_frame = ttk.LabelFrame(parent, text="📁 Roster File Upload", padding="15")
-        file_frame.pack(fill="x", pady=(0, 10))
+        # Input method selection
+        input_method_frame = ttk.LabelFrame(parent, text="📊 Data Input Method", padding="15")
+        input_method_frame.pack(fill="x", pady=(0, 10))
         
-        file_inner_frame = ttk.Frame(file_frame)
+        self.input_method_var = tk.StringVar(value="file")
+        file_radio = ttk.Radiobutton(input_method_frame, text="📁 Upload Roster File (.txt)", 
+                                   variable=self.input_method_var, value="file", 
+                                   command=self._toggle_input_method)
+        file_radio.pack(anchor="w", pady=(0, 5))
+        
+        calendar_radio = ttk.Radiobutton(input_method_frame, text="📅 Import from Calendar", 
+                                       variable=self.input_method_var, value="calendar", 
+                                       command=self._toggle_input_method)
+        calendar_radio.pack(anchor="w")
+        
+        # File upload section
+        self.file_frame = ttk.LabelFrame(parent, text="📁 Roster File Upload", padding="15")
+        self.file_frame.pack(fill="x", pady=(0, 10))
+        
+        file_inner_frame = ttk.Frame(self.file_frame)
         file_inner_frame.pack(fill="x")
         
         ttk.Label(file_inner_frame, text="Roster File (.txt):", font=('Segoe UI', 10, 'bold')).pack(side="left", padx=(0, 10))
@@ -498,23 +700,41 @@ class SalaryCalculatorApp(tk.Tk):
         browse_button = ttk.Button(file_inner_frame, text="📂 Browse", command=self._browse_file, style='Success.TButton')
         browse_button.pack(side="right")
         
-        # Options section
-        options_frame = ttk.LabelFrame(parent, text="⚙️ Advanced Options", padding="15")
-        options_frame.pack(fill="x", pady=(0, 10))
+        # Calendar import section
+        self.calendar_frame = ttk.LabelFrame(parent, text="📅 Calendar Import", padding="15")
+        self.calendar_frame.pack(fill="x", pady=(0, 10))
         
-        options_inner = ttk.Frame(options_frame)
-        options_inner.pack(fill="x")
+        calendar_inner_frame = ttk.Frame(self.calendar_frame)
+        calendar_inner_frame.pack(fill="x")
         
-        self.debug_var = tk.BooleanVar()
-        debug_check = ttk.Checkbutton(options_inner, text="🐛 Debug Mode", variable=self.debug_var, padding=5)
-        debug_check.pack(side="left", padx=10)
+        # Calendar month selection
+        ttk.Label(calendar_inner_frame, text="Month:", font=('Segoe UI', 10, 'bold')).pack(side="left", padx=(0, 10))
         
-        self.sim_increase_var = tk.BooleanVar()
-        sim_check = ttk.Checkbutton(
-            options_inner, text="📈 Simulate Salary Increase", 
-            variable=self.sim_increase_var, command=self._toggle_simulation, padding=5
+        current_month = datetime.now().month
+        self.calendar_month_combo = ttk.Combobox(
+            calendar_inner_frame, 
+            values=[f"{datetime(2000, i, 1).strftime('%B')} ({i:02d})" for i in range(1, 13)],
+            state="readonly", width=15, font=('Segoe UI', 9)
         )
-        sim_check.pack(side="left", padx=10)
+        self.calendar_month_combo.pack(side="left", padx=(0, 20))
+        self.calendar_month_combo.current(current_month - 1)
+        
+        # Test calendar button
+        test_calendar_button = ttk.Button(calendar_inner_frame, text="🔍 Test Calendar", 
+                                        command=self._test_calendar, style='Info.TButton')
+        test_calendar_button.pack(side="right")
+        
+        # Calendar status
+        self.calendar_status_label = ttk.Label(self.calendar_frame, text="Calendar ready for import", 
+                                             foreground="green", font=('Segoe UI', 9))
+        self.calendar_status_label.pack(pady=(10, 0))
+        
+        # Initially hide calendar section
+        self.calendar_frame.pack_forget()
+        
+        # Initialize advanced options variables (moved to menu)
+        self.debug_var = tk.BooleanVar()
+        self.sim_increase_var = tk.BooleanVar()
         
     
     def _create_results_section(self, parent):
@@ -611,6 +831,8 @@ class SalaryCalculatorApp(tk.Tk):
         export_menu.add_command(label="Export to Text...", command=self._export_text, state="disabled")
         
         file_menu.add_separator()
+        file_menu.add_command(label="View Italian Payslip", command=self._view_italian_payslip, state="disabled")
+        file_menu.add_separator()
         file_menu.add_command(label="Open Statistics...", command=self._open_statistics)
         file_menu.add_separator()
         file_menu.add_command(label="Clear Cache", command=self._clear_cache)
@@ -620,9 +842,19 @@ class SalaryCalculatorApp(tk.Tk):
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.quit)
         
+        # Options menu
+        options_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Options", menu=options_menu)
+        
+        options_menu.add_checkbutton(label="🐛 Debug Mode", variable=self.debug_var)
+        options_menu.add_checkbutton(label="📈 Simulate Salary Increase", 
+                                   variable=self.sim_increase_var, 
+                                   command=self._toggle_simulation)
+        
         # Store menu references for enabling/disabling items
         self.file_menu = file_menu
         self.export_menu = export_menu
+        self.options_menu = options_menu
     
     def _browse_file(self):
         """Browse and select roster file"""
@@ -682,11 +914,275 @@ class SalaryCalculatorApp(tk.Tk):
         self.file_status_label.config(text="❌ Encoding error", foreground="red")
         self.raw_text_content = None
     
+    def _toggle_input_method(self):
+        """Toggle between file upload and calendar import"""
+        if self.input_method_var.get() == "file":
+            # Hide calendar and show file upload
+            self.calendar_frame.pack_forget()
+            # Ensure file frame is visible and properly positioned
+            self.file_frame.pack(fill="x", pady=(0, 10), before=self.file_frame.master.winfo_children()[-1])
+        else:
+            # Hide file upload and show calendar
+            self.file_frame.pack_forget() 
+            # Ensure calendar frame is visible and properly positioned
+            self.calendar_frame.pack(fill="x", pady=(0, 10), before=self.calendar_frame.master.winfo_children()[-1])
+    
+    def _test_calendar(self):
+        """Test calendar connectivity and display preview"""
+        try:
+            import requests
+            from icalendar import Calendar
+            
+            # Update status
+            self.calendar_status_label.config(text="Testing calendar connection...", foreground="orange")
+            self.update()
+            
+            # iCal URL
+            ical_url = "https://calendar.google.com/calendar/ical/c37j3h1glaqrceaahhq49kc4rc%40group.calendar.google.com/private-59e77802505e82898d2eb2a9374b78e7/basic.ics"
+            
+            # Test connection
+            response = requests.get(ical_url, timeout=10)
+            response.raise_for_status()
+            
+            cal = Calendar.from_ical(response.content)
+            
+            # Count events
+            event_count = 0
+            for component in cal.walk():
+                if component.name == "VEVENT":
+                    event_count += 1
+            
+            self.calendar_status_label.config(
+                text=f"✅ Calendar connected successfully! Found {event_count} events",
+                foreground="green"
+            )
+            
+            messagebox.showinfo("Calendar Test", f"Successfully connected to calendar!\nFound {event_count} total events.")
+            
+        except Exception as e:
+            self.calendar_status_label.config(
+                text=f"❌ Calendar connection failed: {str(e)[:50]}...",
+                foreground="red"
+            )
+            messagebox.showerror("Calendar Error", f"Failed to connect to calendar:\n{e}")
+    
+    def _import_from_calendar(self):
+        """Import roster data from calendar"""
+        try:
+            import requests
+            from icalendar import Calendar
+            from datetime import datetime, date
+            import re
+            
+            # Get selected month
+            month_text = self.calendar_month_combo.get()
+            month_num = int(month_text.split('(')[1].split(')')[0])
+            current_year = datetime.now().year
+            
+            # Update status
+            self.calendar_status_label.config(
+                text=f"Importing {month_text} from calendar...", 
+                foreground="orange"
+            )
+            self.update()
+            
+            # Fetch calendar
+            ical_url = "https://calendar.google.com/calendar/ical/c37j3h1glaqrceaahhq49kc4rc%40group.calendar.google.com/private-59e77802505e82898d2eb2a9374b78e7/basic.ics"
+            response = requests.get(ical_url, timeout=30)
+            response.raise_for_status()
+            
+            cal = Calendar.from_ical(response.content)
+            
+            # Extract events for the selected month
+            month_events = []
+            for component in cal.walk():
+                if component.name == "VEVENT":
+                    start_dt = component.get('DTSTART').dt
+                    
+                    # Handle both datetime and date objects
+                    if hasattr(start_dt, 'year'):
+                        event_year = start_dt.year
+                        event_month = start_dt.month
+                        event_day = start_dt.day
+                    else:
+                        event_year = start_dt.year
+                        event_month = start_dt.month
+                        event_day = start_dt.day
+                    
+                    if event_year == current_year and event_month == month_num:
+                        summary = str(component.get('SUMMARY', ''))
+                        description = str(component.get('DESCRIPTION', ''))
+                        
+                        # Include ALL events (flights, day off, standby, etc.)
+                        month_events.append({
+                            'date': start_dt,
+                            'title': summary,
+                            'description': description,
+                            'day': event_day
+                        })
+            
+            if not month_events:
+                messagebox.showwarning("No Calendar Data", 
+                    f"No events found for {month_text}.\nMake sure the calendar contains data for this month.")
+                self.calendar_status_label.config(text="❌ No calendar data found", foreground="red")
+                return None
+            
+            # Group events by day and convert to roster format
+            events_by_day = {}
+            for event in month_events:
+                day = event['day']
+                if day not in events_by_day:
+                    events_by_day[day] = []
+                events_by_day[day].append(event)
+            
+            roster_text_lines = []
+            
+            for day in sorted(events_by_day.keys()):
+                day_events = events_by_day[day]
+                
+                # Format date as DD/MM/YYYY (required by roster parser) 
+                date_str = f"{day:02d}/{month_num:02d}/{current_year}"
+                
+                # Get day of week
+                from datetime import date
+                import calendar
+                day_of_week = calendar.day_name[date(current_year, month_num, day).weekday()][:3].upper()
+                
+                # Process different event types
+                flight_legs = []
+                duty_codes = []
+                
+                for event in day_events:
+                    title = event['title']
+                    description = event['description']
+                    
+                    # Debug logging to see actual titles
+                    self.logger.info(f"Processing event on day {day}: title='{title}', desc='{description[:100] if description else 'None'}'")
+                    
+                    # Additional debug for September 21st
+                    if day == 21:
+                        self.logger.info(f"SEPTEMBER 21st EVENT DETAILS: title='{title}', full_desc='{description}'")
+                    
+                    # Check for flight events - be more flexible with pattern matching
+                    if ('X' in title and '-' in title) or ('EJU' in title):
+                        # Extract all flight legs from description
+                        if description and description != 'nan':
+                            # Try multiple flight patterns to catch different formats
+                            patterns = [
+                                # Standard format with next-day indicators: EJU1234 - ABC (1234⁺¹) - DEF (5678)
+                                r'(EJU\d+)\s*-\s*([A-Z]{3})\s*\((\d{4}[^\)]*)\)\s*-\s*([A-Z]{3})\s*\((\d{4}[^\)]*)\)',
+                                # Alternative format: EJU1234-ABC(1234)-DEF(5678)
+                                r'(EJU\d+)-([A-Z]{3})\((\d{4}[^\)]*)\)-([A-Z]{3})\((\d{4}[^\)]*)\)',
+                                # Flexible spacing: EJU1234  -  ABC ( 1234 )  -  DEF ( 5678 )
+                                r'(EJU\d+)\s*-\s*([A-Z]{3})\s*\(\s*(\d{4}[^\)]*)\s*\)\s*-\s*([A-Z]{3})\s*\(\s*(\d{4}[^\)]*)\s*\)',
+                                # With newlines or other separators
+                                r'(EJU\d+)[\s\n]*-[\s\n]*([A-Z]{3})[\s\n]*\((\d{4}[^\)]*)\)[\s\n]*-[\s\n]*([A-Z]{3})[\s\n]*\((\d{4}[^\)]*)\)'
+                            ]
+                            
+                            flight_matches = []
+                            for pattern in patterns:
+                                matches = re.findall(pattern, description, re.MULTILINE | re.DOTALL)
+                                if matches:
+                                    flight_matches.extend(matches)
+                                    if day == 21:
+                                        self.logger.info(f"SEPTEMBER 21st: Pattern '{pattern}' found {len(matches)} matches")
+                                    break
+                            
+                            if day == 21 and not flight_matches:
+                                self.logger.info(f"SEPTEMBER 21st: No matches found with any pattern in description: '{description}'")
+                            
+                            for flight_num, dep_airport, dep_time, arr_airport, arr_time in flight_matches:
+                                # Clean times - extract just the 4 digits, ignore special characters
+                                dep_clean = ''.join(c for c in dep_time if c.isdigit())[:4]
+                                arr_clean = ''.join(c for c in arr_time if c.isdigit())[:4]
+                                
+                                dep_formatted = f"{dep_clean[:2]}:{dep_clean[2:]}" if len(dep_clean) == 4 else dep_time
+                                arr_formatted = f"{arr_clean[:2]}:{arr_clean[2:]}" if len(arr_clean) == 4 else arr_time
+                                
+                                flight_leg = f"{flight_num} {dep_airport}-{arr_airport} {dep_formatted} - {arr_formatted}"
+                                flight_legs.append(flight_leg)
+                                if day == 21:
+                                    self.logger.info(f"SEPTEMBER 21st: Added flight leg: {flight_leg} (cleaned from dep='{dep_time}', arr='{arr_time}')")
+                    
+                    # Check for duty codes - be more flexible
+                    if any(code in title for code in ['ADTY', 'LSBY', 'PSBL', 'PSBE', 'ESBY']):
+                        duty_codes.append('ADTY' if 'ADTY' in title else 
+                                        'LSBY' if 'LSBY' in title else
+                                        'PSBL' if 'PSBL' in title else
+                                        'PSBE' if 'PSBE' in title else 'ESBY')
+                    
+                    # Check for day off / leave
+                    if any(code in title for code in ['D/O', 'LVE', 'REST']):
+                        duty_codes.append('D/O' if 'D/O' in title else 
+                                        'LVE' if 'LVE' in title else 'REST')
+                    
+                    # Check for training
+                    if any(code in title for code in ['SIM', 'SIMI']):
+                        duty_codes.append('SIM' if 'SIM' in title else 'SIMI')
+                
+                # Create roster line
+                if flight_legs or duty_codes:
+                    roster_line = f"{date_str} {day_of_week}"
+                    
+                    # Add duty codes with proper spacing for regex matching
+                    if duty_codes:
+                        for code in duty_codes:
+                            roster_line += f" {code} "
+                    
+                    # Add flight legs
+                    if flight_legs:
+                        if duty_codes:
+                            roster_line += " ".join(flight_legs)
+                        else:
+                            roster_line += " " + " ".join(flight_legs)
+                        
+                    roster_text_lines.append(roster_line)
+            
+            if not roster_text_lines:
+                messagebox.showwarning("No Roster Data", 
+                    "Could not extract any roster information from calendar events.")
+                self.calendar_status_label.config(text="❌ Could not parse roster data", foreground="red") 
+                return None
+            
+            # Create roster text
+            roster_text = "\n".join(roster_text_lines)
+            
+            # Debug: show generated roster text
+            self.logger.info(f"Generated roster text ({len(roster_text_lines)} lines):\n{roster_text}")
+            
+            if len(roster_text_lines) == 0:
+                self.logger.warning("No roster lines generated from calendar events!")
+            
+            # Use existing roster parser
+            airport_service, calculator_service, roster_parser, exporter, df_optimizer = self._get_services()
+            roster_data = roster_parser.parse_roster_text(roster_text)
+            
+            # Update status
+            self.calendar_status_label.config(
+                text=f"✅ Imported {len(roster_data.get('dailySchedule', []))} days from {month_text}",
+                foreground="green"
+            )
+            
+            self.logger.info(f"Successfully imported {len(roster_data.get('dailySchedule', []))} days from calendar")
+            return roster_data
+            
+        except Exception as e:
+            self.calendar_status_label.config(
+                text=f"❌ Import failed: {str(e)[:50]}...",
+                foreground="red"
+            )
+            messagebox.showerror("Calendar Import Error", f"Failed to import from calendar:\n{e}")
+            return None
+    
     def _get_user_profile(self) -> Optional[PilotProfile]:
         """Get user input as PilotProfile"""
-        if not self.raw_text_content:
-            messagebox.showwarning("Missing Data", "Please select a roster file first.")
-            return None
+        if self.input_method_var.get() == "file":
+            if not self.raw_text_content:
+                messagebox.showwarning("Missing Data", "Please select a roster file first.")
+                return None
+        else:  # calendar method
+            # For calendar input, we'll load data during calculation
+            pass
         
         try:
             snc_units = validate_integer_input(self.snc_entry.get(), "SNC Units")
@@ -743,9 +1239,18 @@ class SalaryCalculatorApp(tk.Tk):
             self.progress_var.set(25)
             self.update()
             
-            # Parse roster
+            # Parse roster based on input method
             try:
-                roster_data = roster_parser.parse_roster_text(self.raw_text_content)
+                if self.input_method_var.get() == "file":
+                    # File input - use existing parser
+                    roster_data = roster_parser.parse_roster_text(self.raw_text_content)
+                else:
+                    # Calendar input - import from calendar
+                    roster_data = self._import_from_calendar()
+                    if not roster_data:
+                        self.progress_bar.pack_forget()
+                        return
+                
                 self.progress_var.set(40)
                 self.update()
             except ValueError as e:
@@ -948,10 +1453,9 @@ class SalaryCalculatorApp(tk.Tk):
                 tags=(tag,)
             )
             
-            # Add flight details for work days (but not for Airport Duty or Training)
+            # Add flight details for work days (but not for pure Airport Duty days)
             if (is_work_day and 
-                "Training" not in day_row['Attività'] and 
-                "Airport Duty" not in day_row['Attività']):
+                not (day_row['Attività'] == "Airport Duty" and day_row['Volo'] == 1)):
                 day_flights = detailed_df[detailed_df['Data'].dt.date == date_obj]
                 
                 for _, flight_row in day_flights.iterrows():
@@ -959,6 +1463,12 @@ class SalaryCalculatorApp(tk.Tk):
                     if flight_row['Attività'] == 'Flight':
                         sectors_display = f"{flight_row['Settori']:.2f} (#{flight_row['Settori Cumulativi Operativi']:.1f})"
                         flight_tag = ()
+                    elif 'Training' in flight_row['Attività']:
+                        sectors_display = f"{flight_row['Settori']:.2f} (TRN)"
+                        flight_tag = ('positioning',)  # Use same styling as positioning
+                    elif 'TAXI' in flight_row['Attività']:
+                        sectors_display = f"{flight_row['Settori']:.2f} (UNPAID)"
+                        flight_tag = ('positioning',)
                     else:
                         sectors_display = f"{flight_row['Settori']:.2f} (POS)"
                         flight_tag = ('positioning',)
@@ -987,16 +1497,13 @@ class SalaryCalculatorApp(tk.Tk):
         midnight_standby_days = salary_calc.midnight_standby_days
         working_days = salary_calc.working_days
         extra_diaria_count = len(extra_diaria_days)
-        total_diaria_days = working_days + extra_diaria_count
+        # Don't double count - extra_diaria_days are already included in working_days
+        total_diaria_days = working_days
         total_diaria = total_diaria_days * diaria
         
-        # Format diaria string showing breakdown
-        if midnight_standby_days > 0 and extra_diaria_count > 0:
-            diaria_str = f"Diaria Totale ({base_working_days}+{midnight_standby_days}+{extra_diaria_count} giorni):"
-        elif midnight_standby_days > 0:
+        # Format diaria string showing breakdown (no double counting)
+        if midnight_standby_days > 0:
             diaria_str = f"Diaria Totale ({base_working_days}+{midnight_standby_days} giorni):"
-        elif extra_diaria_count > 0:
-            diaria_str = f"Diaria Totale ({base_working_days}+{extra_diaria_count} giorni):"
         else:
             diaria_str = f"Diaria Totale ({total_diaria_days} giorni):"
         
@@ -1028,7 +1535,7 @@ class SalaryCalculatorApp(tk.Tk):
             summary_lines.append(f"{'   - Aumento Contratto FRV (11%):':<48} {salary_calc.frv_bonus:>15,.2f} €")
         
         if salary_calc.snc_compensation > 0:
-            summary_lines.append(f"{'   - Compenso SNC:':<48} {salary_calc.snc_compensation:>15,.2f} €")
+            summary_lines.append(f"{'   - IND. DISPONIB. PIL (SNC):':<48} {salary_calc.snc_compensation:>15,.2f} €")
         
         if salary_calc.vacation_compensation > 0:
             vacation_label = f"   - Compenso Ferie ({salary_calc.vacation_days} giorni):"
@@ -1040,18 +1547,59 @@ class SalaryCalculatorApp(tk.Tk):
         if total_ido_bonus > 0:
             summary_lines.append(f"{'   - Bonus Infrazione Riposo (IDO):':<48} {total_ido_bonus:>15,.2f} €")
         
+        # Enhanced flight statistics section
+        operational_sectors = self._get_total_operational_sectors()
+        flight_stats = self._get_flight_statistics()
+        
         summary_lines.extend([
             f"{'':-^65}",
-            f"{'Totale Settori Operativi nel Mese:':<48} {self._get_total_operational_sectors():>15.1f}",
+            f"{'STATISTICHE VOLI E ATTIVITÀ':^65}",
+            f"{'':-^65}",
+            f"{'Totale Settori Operativi nel Mese:':<48} {operational_sectors:>15.1f}",
+            f"{'Voli Operativi Effettuati:':<48} {flight_stats['operational_flights']:>15}",
         ])
         
-        # Add positioning flights count if any
-        if hasattr(salary_calc, 'positioning_earnings') and salary_calc.positioning_earnings > 0:
-            detailed_df = self.report_data.get('df_dettagliato') if self.report_data else None
-            if detailed_df is not None:
-                num_positioning = detailed_df[detailed_df['IsPositioning'] == True].shape[0]
-                if num_positioning > 0:
-                    summary_lines.append(f"{'Voli di Posizionamento Effettuati:':<48} {num_positioning}")
+        if flight_stats['positioning_flights'] > 0:
+            summary_lines.append(f"{'Voli di Posizionamento Effettuati:':<48} {flight_stats['positioning_flights']:>15}")
+            
+        if flight_stats['training_activities'] > 0:
+            summary_lines.append(f"{'Attività di Training Effettuate:':<48} {flight_stats['training_activities']:>15}")
+            summary_lines.append(f"{'Settori da Training:':<48} {flight_stats['training_sectors']:>15.1f}")
+            
+        if flight_stats['taxi_legs'] > 0:
+            summary_lines.append(f"{'Tratte TAXI (non pagate):':<48} {flight_stats['taxi_legs']:>15}")
+            
+        if flight_stats['airport_duties'] > 0:
+            summary_lines.append(f"{'Airport Duty svolti:':<48} {flight_stats['airport_duties']:>15}")
+            
+        # Time and distance statistics
+        summary_lines.extend([
+            f"{'':-^65}",
+            f"{'STATISTICHE TEMPO E DISTANZE':^65}",
+            f"{'':-^65}",
+            f"{'Giorni Lavorativi Totali:':<48} {working_days:>15}",
+            f"{'Giorni di Riposo:':<48} {flight_stats['days_off']:>15}",
+            f"{'Giorni in Standby:':<48} {flight_stats['standby_days']:>15}",
+        ])
+        
+        if flight_stats['total_distance'] > 0:
+            summary_lines.append(f"{'Distanza Totale Volata:':<48} {flight_stats['total_distance']:>11,.0f} NM")
+            summary_lines.append(f"{'Distanza Media per Volo:':<48} {flight_stats['avg_distance']:>11,.0f} NM")
+            
+        # Performance metrics
+        summary_lines.extend([
+            f"{'':-^65}",
+            f"{'METRICHE PERFORMANCE':^65}",
+            f"{'':-^65}",
+            f"{'Settori per Giorno Lavorativo:':<48} {operational_sectors/max(working_days,1):>15.2f}",
+            f"{'Guadagno per Settore Operativo:':<48} {salary_calc.operational_sectors_earnings/max(operational_sectors,1):>12,.2f} €"
+        ])
+        
+        if flight_stats['operational_flights'] > 0:
+            summary_lines.append(f"{'Guadagno per Volo Operativo:':<48} {salary_calc.operational_sectors_earnings/flight_stats['operational_flights']:>12,.2f} €")
+            
+        if working_days > 0:
+            summary_lines.append(f"{'Guadagno Lordo per Giorno Lavorativo:':<48} {salary_calc.gross_total/working_days:>12,.2f} €")
         
         summary_lines.extend([
             f"{'':-^65}",
@@ -1077,6 +1625,61 @@ class SalaryCalculatorApp(tk.Tk):
         
         df = self.report_data['df_dettagliato']
         return df['Settori Operativi'].sum() if 'Settori Operativi' in df.columns else 0.0
+    
+    def _get_flight_statistics(self) -> dict:
+        """Get comprehensive flight and activity statistics"""
+        if not self.report_data:
+            return {
+                'operational_flights': 0, 'positioning_flights': 0, 'training_activities': 0,
+                'training_sectors': 0.0, 'taxi_legs': 0, 'airport_duties': 0,
+                'days_off': 0, 'standby_days': 0, 'total_distance': 0.0, 'avg_distance': 0.0
+            }
+        
+        detailed_df = self.report_data.get('df_dettagliato')
+        grouped_df = self.report_data.get('df_raggruppato')
+        
+        if detailed_df is None or grouped_df is None:
+            return {
+                'operational_flights': 0, 'positioning_flights': 0, 'training_activities': 0,
+                'training_sectors': 0.0, 'taxi_legs': 0, 'airport_duties': 0,
+                'days_off': 0, 'standby_days': 0, 'total_distance': 0.0, 'avg_distance': 0.0
+            }
+        
+        # Flight statistics from detailed data
+        operational_flights = len(detailed_df[detailed_df['Attività'] == 'Flight'])
+        positioning_flights = len(detailed_df[detailed_df['Attività'] == 'Positioning'])
+        
+        # Training statistics
+        training_activities = len(detailed_df[detailed_df['Attività'].str.contains('Training', na=False)])
+        training_sectors = detailed_df[detailed_df['Attività'].str.contains('Training', na=False)]['Settori'].sum()
+        
+        # TAXI legs (unpaid)
+        taxi_legs = len(detailed_df[detailed_df['Attività'].str.contains('TAXI', na=False)])
+        
+        # Airport duties
+        airport_duties = len(detailed_df[detailed_df['Attività'].str.contains('Airport Duty', na=False)])
+        
+        # Day statistics from grouped data
+        days_off = len(grouped_df[grouped_df['Attività'].str.contains('Day Off|Day off', na=False)])
+        standby_days = len(grouped_df[grouped_df['Attività'].str.contains('Standby', na=False)])
+        
+        # Distance statistics
+        flight_df = detailed_df[detailed_df['Attività'].isin(['Flight', 'Positioning'])]
+        total_distance = flight_df['Distanza'].sum() if not flight_df.empty else 0.0
+        avg_distance = flight_df['Distanza'].mean() if not flight_df.empty else 0.0
+        
+        return {
+            'operational_flights': operational_flights,
+            'positioning_flights': positioning_flights,
+            'training_activities': training_activities,
+            'training_sectors': training_sectors,
+            'taxi_legs': taxi_legs,
+            'airport_duties': airport_duties,
+            'days_off': days_off,
+            'standby_days': standby_days,
+            'total_distance': total_distance,
+            'avg_distance': avg_distance
+        }
     
     def _toggle_simulation(self):
         """Toggle salary increase simulation"""
@@ -1294,6 +1897,8 @@ class SalaryCalculatorApp(tk.Tk):
         self.export_menu.entryconfig("Export to CSV...", state=state)
         self.export_menu.entryconfig("Export to Excel...", state=state)
         self.export_menu.entryconfig("Export to Text...", state=state)
+        # Enable view payslip option
+        self.file_menu.entryconfig("View Italian Payslip", state=state)
     
     def _export_csv(self):
         """Export report to CSV format"""
@@ -1410,6 +2015,18 @@ class SalaryCalculatorApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Export Error", f"Failed to export report:\n{e}")
             self.logger.error(f"Text export failed: {e}")
+    
+    def _view_italian_payslip(self):
+        """View Italian-style payslip in a window"""
+        if not self.report_data:
+            messagebox.showwarning("Warning", "No report data to view.")
+            return
+        
+        try:
+            ItalianPayslipViewer(self, self.report_data)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to display payslip:\n{e}")
+            self.logger.error(f"Italian payslip view failed: {e}")
     
     def _clear_cache(self):
         """Clear performance cache"""

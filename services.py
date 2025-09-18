@@ -232,9 +232,9 @@ class RosterParser:
             "raw_text": day_text
         }
         
-        # Determine duty type
-        duty_code_match = re.search(r'\s(PSBL|PSBE|ESBY|ADTY|CSBE|GDO|D/O|LVE|SIM|M2D1|LSBY|REST|WD/O|SIMI)\s', lines[0])
-        is_flight_day = "EJU" in day_text or "FR" in day_text or re.search(r'\s\d{4}\s', day_text)
+        # Determine duty type - exclude TAXI from duty codes as they are flight legs
+        duty_code_match = re.search(r'\s(PSBL|PSBE|ESBY|ADTY|CSBE|CSBL|GDO|D/O|LVE|SIM|M2D1|LSBY|REST|WD/O|SIMI|G/S|LTGI)(\s|$)', lines[0])
+        is_flight_day = "EJU" in day_text or "FR" in day_text or re.search(r'\s\d{4}\s', day_text) or "TAXI" in day_text or "OWN" in day_text
         initial_duty_code = duty_code_match.group(1) if duty_code_match else None
         
         if is_flight_day:
@@ -257,6 +257,9 @@ class RosterParser:
         # Extract flight legs
         self._extract_flight_legs(day_data, lines)
         
+        # Check for additional training duties on flight days
+        self._extract_training_duties(day_data, lines)
+        
         return day_data
     
     def _process_non_flight_duty(self, day_data: Dict[str, Any], duty_code: str) -> None:
@@ -266,6 +269,7 @@ class RosterParser:
             "PSBE": ("Standby", "MXP Standby"),
             "ADTY": ("Airport Duty", "Airport Duty"),
             "CSBE": ("Standby", "Crewing Standby"),
+            "CSBL": ("Standby", "Crewing Standby Late"),
             "ESBY": ("Standby", "Early Standby"),
             "LSBY": ("Standby", "Late Standby")
         }
@@ -281,12 +285,20 @@ class RosterParser:
             "REST": ("Rest Day", "Rest Day")        # Should count as diaria
         }
         
-        other_codes = {
+        training_codes = {
             "LVE": ("Leave", "Annual leave"),
             "SIM": ("Training", "Simulator"),
             "M2D1": ("Training", "Module 2 Day 1"),
-            "SIMI": ("Training", "Simulator instructor")  # 4 sectors
+            "SIMI": ("Training", "Simulator instructor"),  # 4 sectors
+            "G/S": ("Training", "Ground School"),  # Training FO duty - 8 hours, 2 nominal sectors
+            "LTGI": ("Training", "Pre Line training ground Instructor")  # Training FO duty - 8 hours, 2 nominal sectors
         }
+        
+        taxi_codes = {
+            # Pattern matches TAXI followed by optional numbers (e.g., TAXI71, TAXI72)
+        }
+        
+        other_codes = training_codes
         
         if duty_code in standby_codes:
             duty_type, description = standby_codes[duty_code]
@@ -355,24 +367,51 @@ class RosterParser:
             if line.strip().startswith(('CP ', 'FO ', 'FA ', 'PU ')):
                 continue
             
-            leg_match = leg_pattern.search(line)
-            if leg_match:
+            # Find ALL flight legs in the line, not just the first one
+            leg_matches = leg_pattern.findall(line)
+            time_matches = time_pattern.findall(line)
+            
+            for i, leg_match in enumerate(leg_matches):
                 leg = {
-                    "flightNumber": leg_match.group(1),
-                    "aircraft": leg_match.group(2),
-                    "origin": leg_match.group(4),
-                    "destination": leg_match.group(5),
-                    "isPositioning": bool(leg_match.group(3)),
+                    "flightNumber": leg_match[0],
+                    "aircraft": leg_match[1] if leg_match[1] else None,
+                    "origin": leg_match[3],
+                    "destination": leg_match[4],
+                    "isPositioning": bool(leg_match[2]) or leg_match[0].startswith('TAXI'),
                     "hasActualTimes": False
                 }
                 
-                time_match = time_pattern.search(line)
-                if time_match:
-                    leg["hasActualTimes"] = bool(time_match.group(1)) or bool(time_match.group(3))
-                    leg["takeOffTime"] = time_match.group(2)
-                    leg["landingTime"] = time_match.group(4)
+                # Match corresponding time if available
+                if i < len(time_matches):
+                    time_match = time_matches[i]
+                    leg["hasActualTimes"] = bool(time_match[0]) or bool(time_match[2])
+                    leg["takeOffTime"] = time_match[1]
+                    leg["landingTime"] = time_match[3]
                 
                 day_data["duty"]["legs"].append(leg)
+    
+    def _extract_training_duties(self, day_data: Dict[str, Any], lines: List[str]) -> None:
+        """Extract training duties that appear alongside flight legs"""
+        day_data["duty"]["training_duties"] = day_data["duty"].get("training_duties", [])
+        
+        # Check for G/S and LTGI duties - only count once per day regardless of multiple sessions
+        day_text = "\n".join(lines)
+        has_gs = bool(re.search(r'\bG/S\b', day_text))
+        has_ltgi = bool(re.search(r'\bLTGI\b', day_text))
+        
+        if has_gs:
+            day_data["duty"]["training_duties"].append({
+                "type": "G/S",
+                "description": "Ground School",
+                "sectors": 4.0
+            })
+            
+        if has_ltgi:
+            day_data["duty"]["training_duties"].append({
+                "type": "LTGI", 
+                "description": "Pre Line training ground Instructor",
+                "sectors": 4.0
+            })
 
 
 class SalaryCalculatorService:
@@ -454,32 +493,65 @@ class SalaryCalculatorService:
             if activity_type == 'Flight':
                 for leg in duty.get('legs', []):
                     try:
-                        distance = self.distance_calculator.calculate_distance(
-                            leg.get('origin'), leg.get('destination')
-                        )
+                        origin = leg.get('origin')
+                        destination = leg.get('destination')
+                        
+                        # Skip legs involving training facilities (not real airports)
+                        training_facilities = {'XWT', 'XDH'}
+                        if origin in training_facilities or destination in training_facilities:
+                            continue
+                            
+                        distance = self.distance_calculator.calculate_distance(origin, destination)
                         sectors = self._assign_sector_value(distance)
                         is_positioning = leg.get('isPositioning', False)
                         
+                        # Check if this is a TAXI leg (unpaid positioning)
+                        is_taxi = leg.get('flightNumber', '').startswith('TAXI')
+                        
                         schedule_list.append({
                             'Data': day.get('date'),
-                            'Attività': 'Positioning' if is_positioning else 'Flight',
+                            'Attività': 'TAXI (unpaid)' if is_taxi else ('Positioning' if is_positioning else 'Flight'),
                             'Volo': leg.get('flightNumber', 'N/A'),
                             'Partenza': leg.get('origin'),
                             'Arrivo': leg.get('destination'),
                             'Distanza': distance,
-                            'Settori': sectors,
-                            'IsPositioning': is_positioning
+                            'Settori': 0 if is_taxi else sectors,  # TAXI legs earn 0 sectors
+                            'IsPositioning': is_positioning,
+                            'IsTAXI': is_taxi
                         })
                     except MissingAirportError:
                         # Re-raise to be handled by GUI
                         raise
+                
+                # Process additional training duties on flight days
+                for training_duty in duty.get('training_duties', []):
+                    schedule_list.append({
+                        'Data': day.get('date'),
+                        'Attività': f"Training ({training_duty['description']})",
+                        'Volo': training_duty['type'],
+                        'Partenza': '---',
+                        'Arrivo': '---',
+                        'Distanza': 0,
+                        'Settori': training_duty['sectors'],
+                        'IsPositioning': False,
+                        'IsTAXI': False,
+                        'IsAirportDuty': False,
+                        'IsTraining': True
+                    })
             else:
                 # Handle airport duty sector calculation
                 sectors = 0
                 if activity_type == "Airport Duty":
                     sectors = self._calculate_airport_duty_sectors(duty)
-                elif activity_type == "Training" and ("SIM" in duty.get('description', '') or "Simulator" in duty.get('description', '')):
-                    sectors = self._calculate_sim_sectors(duty, day.get('date', ''))
+                elif activity_type == "Training":
+                    if "SIM" in duty.get('description', '') or "Simulator" in duty.get('description', ''):
+                        sectors = self._calculate_sim_sectors(duty, day.get('date', ''))
+                    elif "Ground School" in duty.get('description', '') or "Pre Line training ground Instructor" in duty.get('description', ''):
+                        sectors = 4.0  # Training FO duties: 4 nominal sectors for 8 hours
+                    else:
+                        sectors = 0
+                elif activity_type == "TAXI":
+                    sectors = 0  # TAXI duties are unpaid
                 
                 schedule_list.append({
                     'Data': day.get('date'),
@@ -542,6 +614,8 @@ class SalaryCalculatorService:
             df['IsAirportDuty'] = False
         if 'IsTraining' not in df.columns:
             df['IsTraining'] = False
+        if 'IsTAXI' not in df.columns:
+            df['IsTAXI'] = False
             
         df['Settori Operativi'] = df.apply(
             lambda row: row['Settori'] if (row['Attività'] == 'Flight' and not row['IsPositioning']) else 0,
@@ -560,6 +634,7 @@ class SalaryCalculatorService:
             is_positioning = row['IsPositioning']
             is_airport_duty = row.get('IsAirportDuty', False)
             is_training = row.get('IsTraining', False)
+            is_taxi = row.get('IsTAXI', False)
             
             if sectors_this_row > 0:
                 if is_operational:
@@ -589,6 +664,9 @@ class SalaryCalculatorService:
                 elif is_training:
                     # Training sectors don't count toward operational total
                     earnings = sectors_this_row * sector_value
+                elif is_taxi:
+                    # TAXI legs are unpaid - explicitly set to 0
+                    earnings = 0
             
             df.at[i, 'Guadagno (€)'] = earnings
         
@@ -967,7 +1045,7 @@ class SalaryCalculatorService:
             frv_bonus = (base_salary + allowance) * SalaryConfig.FRV_CONTRACT_INCREASE_RATE
         
         # SNC compensation
-        snc_compensation = profile.snc_units * SalaryConfig.SNC_SECTOR_MULTIPLIER * sector_value
+        snc_compensation = profile.snc_units * SalaryConfig.SNC_SECTOR_MULTIPLIER
         
         # Vacation compensation
         vacation_days = grouped_df[grouped_df['Attività'].str.contains("Leave", na=False)]['Data'].nunique()
